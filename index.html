@@ -43,10 +43,21 @@
   <div id="map"></div>
 
   <script>
+    // ✅ ALERTA 1: El script comenzó a ejecutarse
+    alert('🚀 1. Script iniciado');
+
     // 🔥 CONFIGURACIÓN DE SUPABASE (REEMPLAZA CON TUS LLAVES)
     const SUPABASE_URL = 'https://gtaadqluoljexglenbqo.supabase.co'; // <--- PON AQUÍ TU URL
     const SUPABASE_ANON_KEY = 'sb_publishable_n_h1fN6QWuEWbFxrCTKFvQ_rxw-o9-Y'; // <--- PON AQUÍ TU CLAVE
+
+    // ✅ ALERTA 2: Luego de definir las llaves
+    alert('✅ 2. Llaves definidas');
+
+    // Inicializar Supabase
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // ✅ ALERTA 3: Supabase inicializado
+    alert('✅ 3. Supabase creado');
 
     // Inicializar el mapa
     const map = L.map('map').setView([10.4806, -66.9036], 12);
@@ -54,6 +65,9 @@
       maxZoom: 19,
       attribution: 'MapaVida'
     }).addTo(map);
+
+    // ✅ ALERTA 4: Mapa creado
+    alert('✅ 4. Mapa inicializado');
 
     let markersLayer = L.layerGroup().addTo(map);
 
@@ -87,19 +101,19 @@
       });
     }
 
-    // 🔥 EVENTO DEL BOTÓN CON DEPURACIÓN
-    document.addEventListener('DOMContentLoaded', function() {
-      const btn = document.getElementById('btnAgregar');
-      
-      // Depuración: mostrar si el botón existe
-      if (!btn) {
-        alert('ERROR: Botón no encontrado en el DOM');
-        return;
-      }
+    // ✅ ALERTA 5: Antes de asignar el evento
+    alert('✅ 5. A punto de asignar evento al botón');
 
-      // Depuración: mostrar que el click funciona
+    // Buscar el botón
+    const btn = document.getElementById('btnAgregar');
+    if (!btn) {
+      alert('❌ ERROR: Botón no encontrado en el DOM');
+    } else {
+      // ✅ ALERTA 6: Botón encontrado
+      alert('✅ 6. Botón encontrado, asignando click');
+
       btn.addEventListener('click', function() {
-        alert('✅ Botón clickeado (depuración)');
+        alert('✅ 7. ¡CLICK DETECTADO! (depuración)');
         
         const nombre = prompt('Nombre del refugio:');
         if (!nombre) return;
@@ -115,15 +129,18 @@
           .insert([{ nombre, direccion, lat, lng, cupo }])
           .then(({ error }) => {
             if (error) {
-              alert('Error al guardar: ' + error.message);
+              alert('❌ Error al guardar: ' + error.message);
             } else {
-              alert('¡Refugio agregado exitosamente!');
+              alert('✅ ¡Refugio agregado exitosamente!');
               cargarRefugios();
             }
           })
-          .catch(err => alert('Error de red: ' + err.message));
+          .catch(err => alert('❌ Error de red: ' + err.message));
       });
-    });
+
+      // ✅ ALERTA 7: Evento asignado correctamente
+      alert('✅ 7. Evento de click asignado correctamente');
+    }
 
     // Cargar refugios al inicio
     cargarRefugios();
@@ -134,6 +151,9 @@
         .then(() => console.log('SW OK'))
         .catch(() => console.warn('SW no disponible'));
     }
+
+    // ✅ ALERTA 8: Script finalizado correctamente
+    alert('✅ 8. Script completo');
   </script>
 </body>
 </html>
