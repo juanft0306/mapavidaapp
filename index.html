@@ -43,11 +43,12 @@
   <div id="map"></div>
 
   <script>
-    // 🔥 CONFIGURACIÓN DE SUPABASE (DEJA ESTAS COMILLAS VACÍAS POR AHORA)
-    const SUPABASE_URL = 'https://gtaadqluoljexglenbqo.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_n_h1fN6QWuEWbFxrCTKFvQ_rxw-o9-Y';
+    // 🔥 CONFIGURACIÓN DE SUPABASE (REEMPLAZA CON TUS LLAVES)
+    const SUPABASE_URL = 'https://gtaadqluoljexglenbqo.supabase.co'; // <--- PON AQUÍ TU URL
+    const SUPABASE_ANON_KEY = 'sb_publishable_n_h1fN6QWuEWbFxrCTKFvQ_rxw-o9-Y'; // <--- PON AQUÍ TU CLAVE
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    // Inicializar el mapa
     const map = L.map('map').setView([10.4806, -66.9036], 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
@@ -56,6 +57,7 @@
 
     let markersLayer = L.layerGroup().addTo(map);
 
+    // Función para cargar refugios
     async function cargarRefugios() {
       try {
         const { data, error } = await supabase.from('refugios').select('*');
@@ -85,28 +87,48 @@
       });
     }
 
-    cargarRefugios();
-
-    document.getElementById('btnAgregar').addEventListener('click', async () => {
-      const nombre = prompt('Nombre del refugio:');
-      if (!nombre) return;
-      const direccion = prompt('Dirección:');
-      const lat = parseFloat(prompt('Latitud (ej: 10.4910):'));
-      const lng = parseFloat(prompt('Longitud (ej: -66.8730):'));
-      if (isNaN(lat) || isNaN(lng)) return alert('Coordenadas inválidas');
-      const cupo = parseInt(prompt('Cupo disponible:')) || 0;
-
-      const { error } = await supabase
-        .from('refugios')
-        .insert([{ nombre, direccion, lat, lng, cupo }]);
-      if (error) {
-        alert('Error: ' + error.message);
-      } else {
-        alert('¡Refugio agregado!');
-        cargarRefugios();
+    // 🔥 EVENTO DEL BOTÓN CON DEPURACIÓN
+    document.addEventListener('DOMContentLoaded', function() {
+      const btn = document.getElementById('btnAgregar');
+      
+      // Depuración: mostrar si el botón existe
+      if (!btn) {
+        alert('ERROR: Botón no encontrado en el DOM');
+        return;
       }
+
+      // Depuración: mostrar que el click funciona
+      btn.addEventListener('click', function() {
+        alert('✅ Botón clickeado (depuración)');
+        
+        const nombre = prompt('Nombre del refugio:');
+        if (!nombre) return;
+        const direccion = prompt('Dirección:');
+        const lat = parseFloat(prompt('Latitud (ej: 10.4910):'));
+        const lng = parseFloat(prompt('Longitud (ej: -66.8730):'));
+        if (isNaN(lat) || isNaN(lng)) return alert('Coordenadas inválidas');
+        const cupo = parseInt(prompt('Cupo disponible:')) || 0;
+
+        // Intentar guardar en Supabase
+        supabase
+          .from('refugios')
+          .insert([{ nombre, direccion, lat, lng, cupo }])
+          .then(({ error }) => {
+            if (error) {
+              alert('Error al guardar: ' + error.message);
+            } else {
+              alert('¡Refugio agregado exitosamente!');
+              cargarRefugios();
+            }
+          })
+          .catch(err => alert('Error de red: ' + err.message));
+      });
     });
 
+    // Cargar refugios al inicio
+    cargarRefugios();
+
+    // Registrar Service Worker para offline
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js')
         .then(() => console.log('SW OK'))
