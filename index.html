@@ -16,7 +16,6 @@
   <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
   
   <style>
-    /* --- RESET Y BASE --- */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; }
     #map { height: 100vh; width: 100%; }
@@ -78,6 +77,7 @@
       display: flex;
       align-items: center;
       gap: 4px;
+      white-space: nowrap;
     }
     #filtros .filtro-btn.activo {
       background: #E53935;
@@ -237,6 +237,8 @@
     .popup-advertencia { color: #d32f2f; font-weight: bold; }
     .popup-ok { color: #2e7d32; }
     .popup-definicion { font-size: 12px; color: #555; font-style: italic; margin: 2px 0 6px 0; background: #f9f9f9; padding: 4px 8px; border-radius: 4px; }
+    .popup-envio { background: #e3f2fd; padding: 6px; border-radius: 6px; margin-top: 4px; }
+    .popup-envio strong { color: #0d47a1; }
 
     /* --- NAVEGACIÓN --- */
     .leaflet-routing-container {
@@ -303,6 +305,7 @@
       #panelSuperior button { font-size: 12px; padding: 5px 12px; }
       #menuOpciones { min-width: 160px; }
       #btnAgregar { font-size: 16px; padding: 12px 18px; min-width: 120px; }
+      #filtros .filtro-btn { font-size: 10px; padding: 2px 8px; }
     }
   </style>
 </head>
@@ -320,14 +323,14 @@
     <div id="filtros">
       <button class="filtro-btn activo" data-tipo="todos">✅ Todos</button>
       <button class="filtro-btn" data-tipo="refugio"><span class="color-bola" style="background:#2E7D32;"></span> Refugio</button>
-      <button class="filtro-btn" data-tipo="centro_acopio"><span class="color-bola" style="background:#F57C00;"></span> Acopio</button>
+      <button class="filtro-btn" data-tipo="centro_acopio"><span class="color-bola" style="background:#F57C00;"></span> Centro de acopio</button>
       <button class="filtro-btn" data-tipo="hospital"><span class="color-bola" style="background:#1976D2;"></span> Hospital</button>
-      <button class="filtro-btn" data-tipo="edificio_caido"><span class="color-bola" style="background:#C62828;"></span> Caído</button>
-      <button class="filtro-btn" data-tipo="peligro_derrumbe"><span class="color-bola" style="background:#E65100;"></span> Derrumbe</button>
-      <button class="filtro-btn" data-tipo="sin_inspeccionar"><span class="color-bola" style="background:#6A1B9A;"></span> Sin insp.</button>
-      <button class="filtro-btn" data-tipo="veterinaria"><span class="color-bola" style="background:#00897B;"></span> Veterinaria</button>
-      <button class="filtro-btn" data-tipo="ayuda_psicologica"><span class="color-bola" style="background:#8E24AA;"></span> Psicología</button>
-      <button class="filtro-btn" data-tipo="vacuna_tetanos"><span class="color-bola" style="background:#0D47A1;"></span> Vacuna</button>
+      <button class="filtro-btn" data-tipo="edificio_caido"><span class="color-bola" style="background:#C62828;"></span> Edificio caído</button>
+      <button class="filtro-btn" data-tipo="peligro_derrumbe"><span class="color-bola" style="background:#E65100;"></span> Peligro de derrumbe</button>
+      <button class="filtro-btn" data-tipo="sin_inspeccionar"><span class="color-bola" style="background:#6A1B9A;"></span> Sin inspeccionar</button>
+      <button class="filtro-btn" data-tipo="veterinaria"><span class="color-bola" style="background:#00897B;"></span> Atención veterinaria</button>
+      <button class="filtro-btn" data-tipo="ayuda_psicologica"><span class="color-bola" style="background:#8E24AA;"></span> Ayuda psicológica</button>
+      <button class="filtro-btn" data-tipo="vacuna_tetanos"><span class="color-bola" style="background:#0D47A1;"></span> Vacuna antitetánica</button>
     </div>
   </div>
 
@@ -338,14 +341,14 @@
   <div id="menuContainer">
     <div id="menuOpciones">
       <button data-tipo="refugio"><span class="color-bola" style="background:#2E7D32;width:14px;height:14px;"></span> 🏠 Refugio</button>
-      <button data-tipo="centro_acopio"><span class="color-bola" style="background:#F57C00;width:14px;height:14px;"></span> 📦 Acopio</button>
+      <button data-tipo="centro_acopio"><span class="color-bola" style="background:#F57C00;width:14px;height:14px;"></span> 📦 Centro de acopio</button>
       <button data-tipo="hospital"><span class="color-bola" style="background:#1976D2;width:14px;height:14px;"></span> 🏥 Hospital</button>
-      <button data-tipo="edificio_caido"><span class="color-bola" style="background:#C62828;width:14px;height:14px;"></span> 💥 Caído</button>
-      <button data-tipo="peligro_derrumbe"><span class="color-bola" style="background:#E65100;width:14px;height:14px;"></span> ⚠️ Derrumbe</button>
-      <button data-tipo="sin_inspeccionar"><span class="color-bola" style="background:#6A1B9A;width:14px;height:14px;"></span> ❓ Sin insp.</button>
-      <button data-tipo="veterinaria"><span class="color-bola" style="background:#00897B;width:14px;height:14px;"></span> 🐾 Veterinaria</button>
-      <button data-tipo="ayuda_psicologica"><span class="color-bola" style="background:#8E24AA;width:14px;height:14px;"></span> 🧠 Psicología</button>
-      <button data-tipo="vacuna_tetanos"><span class="color-bola" style="background:#0D47A1;width:14px;height:14px;"></span> 💉 Vacuna</button>
+      <button data-tipo="edificio_caido"><span class="color-bola" style="background:#C62828;width:14px;height:14px;"></span> 💥 Edificio caído</button>
+      <button data-tipo="peligro_derrumbe"><span class="color-bola" style="background:#E65100;width:14px;height:14px;"></span> ⚠️ Peligro de derrumbe</button>
+      <button data-tipo="sin_inspeccionar"><span class="color-bola" style="background:#6A1B9A;width:14px;height:14px;"></span> ❓ Sin inspeccionar</button>
+      <button data-tipo="veterinaria"><span class="color-bola" style="background:#00897B;width:14px;height:14px;"></span> 🐾 Atención veterinaria</button>
+      <button data-tipo="ayuda_psicologica"><span class="color-bola" style="background:#8E24AA;width:14px;height:14px;"></span> 🧠 Ayuda psicológica</button>
+      <button data-tipo="vacuna_tetanos"><span class="color-bola" style="background:#0D47A1;width:14px;height:14px;"></span> 💉 Vacuna antitetánica</button>
     </div>
     <button id="btnAdmin" style="display:none;">🔐 Administrar (desbloquear)</button>
     <button id="btnAgregar">➕ Agregar</button>
