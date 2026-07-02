@@ -2,7 +2,7 @@
 // 1. CONFIGURACIÓN SUPABASE (¡REEMPLAZA TU CLAVE!)
 // ============================================================
 const SUPABASE_URL = 'https://gtaadqluoljexglenbqo.supabase.co';
-const SUPABASE_ANON_KEY = 'TU_CLAVE_ANON_AQUI'; // <-- PON AQUÍ TU CLAVE REAL
+const SUPABASE_ANON_KEY = 'sb_publishable_n_h1fN6QWuEWbFxrCTKFvQ_rxw-o9-Y'; // <-- PON AQUÍ TU CLAVE REAL
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ============================================================
