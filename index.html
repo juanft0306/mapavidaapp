@@ -20,7 +20,6 @@
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; }
     #map { height: 100vh; width: 100%; }
 
-    /* --- PANEL SUPERIOR --- */
     #panelSuperior {
       position: fixed;
       top: 10px;
@@ -90,7 +89,6 @@
       border-radius: 50%;
     }
 
-    /* --- MENÚ FLOTANTE --- */
     #menuContainer {
       position: fixed;
       bottom: 30px;
@@ -157,7 +155,6 @@
     }
     #btnAdmin:active { transform: scale(0.95); }
 
-    /* --- FORMULARIO --- */
     #formulario {
       display: none;
       position: fixed;
@@ -225,7 +222,6 @@
       display: none;
     }
 
-    /* --- POPUPS --- */
     .popup-tipo { font-weight: bold; color: #E53935; }
     .popup-info { font-size: 13px; margin: 3px 0; }
     .popup-distancia { font-size: 12px; color: #555; margin-top: 4px; }
@@ -240,7 +236,6 @@
     .popup-envio { background: #e3f2fd; padding: 6px; border-radius: 6px; margin-top: 4px; }
     .popup-envio strong { color: #0d47a1; }
 
-    /* --- NAVEGACIÓN --- */
     .leaflet-routing-container {
       background: white;
       border-radius: 8px;
@@ -275,7 +270,6 @@
     }
     #btnCancelarNavegacion:active { transform: scale(0.95); }
 
-    /* --- LOADER --- */
     #cargando {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -299,7 +293,6 @@
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-    /* --- RESPONSIVE --- */
     @media (max-width: 480px) {
       #panelSuperior input { font-size: 13px; padding: 6px 10px; }
       #panelSuperior button { font-size: 12px; padding: 5px 12px; }
@@ -310,13 +303,11 @@
   </style>
 </head>
 <body>
-  <!-- LOADER -->
   <div id="cargando">
     <div class="spinner"></div>
     <div>Cargando mapa...</div>
   </div>
 
-  <!-- PANEL SUPERIOR -->
   <div id="panelSuperior">
     <input type="text" id="buscador" placeholder="Buscar ubicación (ej: Los Rosales, Caracas)" />
     <button id="btnBuscar">🔍 Buscar</button>
@@ -334,10 +325,8 @@
     </div>
   </div>
 
-  <!-- MAPA -->
   <div id="map"></div>
 
-  <!-- MENÚ FLOTANTE -->
   <div id="menuContainer">
     <div id="menuOpciones">
       <button data-tipo="refugio"><span class="color-bola" style="background:#2E7D32;width:14px;height:14px;"></span> 🏠 Refugio</button>
@@ -354,7 +343,6 @@
     <button id="btnAgregar">➕ Agregar</button>
   </div>
 
-  <!-- FORMULARIO -->
   <div id="formulario">
     <h3 id="formTitulo">📝 Nuevo punto</h3>
     <div id="camposDinamicos"></div>
@@ -367,12 +355,8 @@
     <button id="btnCancelar">❌ Cancelar</button>
   </div>
 
-  <!-- BOTÓN CANCELAR NAVEGACIÓN -->
   <button id="btnCancelarNavegacion">✖ Cancelar navegación</button>
 
-  <!-- ========================================================== -->
-  <!-- CARGAR EL ARCHIVO DE JAVASCRIPT EXTERNO (app.js) -->
-  <!-- ========================================================== -->
   <script src="app.js"></script>
 </body>
 </html>
