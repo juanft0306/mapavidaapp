@@ -26,7 +26,7 @@ let modoNavegacion = false;
 
 document.getElementById('cargando').style.display = 'none';
 
-// --- DEFINICIONES CLARAS PARA CADA TIPO ---
+// --- DEFINICIONES CLARAS ---
 const DEFINICIONES = {
   edificio_caido: 'Estructura que ya colapsó total o parcialmente. No ingresar. Necesita maquinaria y personal especializado para remover escombros.',
   peligro_derrumbe: 'Estructura con daños estructurales visibles (grietas, inclinación, etc.) que podría colapsar en cualquier momento. Manténgase alejado.',
@@ -333,7 +333,6 @@ function mostrarPuntos(puntos) {
       popupContent += `<div style="margin-top:8px;background:#e0e0e0;padding:6px;border-radius:6px;text-align:center;color:#333;">✅ Ya recogido y limpiado</div>`;
     }
 
-    // Ofrecimiento infantil
     if (p.informacion?.necesidad_infantil && p.informacion?.voluntarios_infantiles !== undefined) {
       popupContent += `
         <button class="btn-ofrecerse-infantil" data-id="${p.id}" style="margin-top:8px;background:#FF6F00;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
@@ -349,7 +348,6 @@ function mostrarPuntos(puntos) {
       }
     }
 
-    // CREAR ENVÍO (SOLO CENTROS DE ACOPIO)
     if (p.tipo === 'centro_acopio') {
       popupContent += `
         <button class="btn-crear-envio" data-id="${p.id}" style="margin-top:8px;background:#F57C00;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
@@ -371,18 +369,21 @@ function mostrarPuntos(puntos) {
       }
     }
 
-    // Navegación (pública)
     popupContent += `
       <button class="btn-navegar" data-id="${p.id}" style="margin-top:6px;background:#1a73e8;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
         🧭 Cómo llegar
       </button>
     `;
 
-    // Eliminar (solo admin)
     if (modoAdmin) {
       popupContent += `
         <button class="btn-eliminar-admin" data-id="${p.id}" style="margin-top:6px;background:#d32f2f;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
           🗑️ Eliminar punto
+        </button>
+      `;
+      popupContent += `
+        <button class="btn-editar-punto" data-id="${p.id}" style="margin-top:6px;background:#1a237e;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
+          ✏️ Editar punto
         </button>
       `;
     }
@@ -400,6 +401,8 @@ function mostrarPuntos(puntos) {
       if (btnRecoger) btnRecoger.addEventListener('click', (e) => { e.stopPropagation(); marcarRecogido(p.id); });
       const btnEliminar = document.querySelector(`.btn-eliminar-admin[data-id="${p.id}"]`);
       if (btnEliminar) btnEliminar.addEventListener('click', (e) => { e.stopPropagation(); eliminarPunto(p.id); });
+      const btnEditar = document.querySelector(`.btn-editar-punto[data-id="${p.id}"]`);
+      if (btnEditar) btnEditar.addEventListener('click', (e) => { e.stopPropagation(); mostrarFormularioEdicionPunto(p.id); });
       const btnOfrecerse = document.querySelector(`.btn-ofrecerse-infantil[data-id="${p.id}"]`);
       if (btnOfrecerse) {
         btnOfrecerse.addEventListener('click', function(e) {
@@ -474,11 +477,11 @@ function calcularDistancia(lat1, lon1, lat2, lon2) {
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));   
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 // ============================================================
 // MAPAVIDA - APP COMPLETA (BLOQUE 2)
-// INTERACCIÓN, FORMULARIOS, NAVEGACIÓN
+// INTERACCIÓN, MENÚ, FORMULARIOS, GUARDAR
 // ============================================================
 
 // --- SELECCIÓN EN EL MAPA ---
@@ -540,7 +543,7 @@ btnAdmin.addEventListener('click', function() {
     btnAdmin.style.background = '#2e7d32';
     document.getElementById('btnEliminar').style.display = 'block';
     aplicarFiltros();
-    alert('🔓 Modo administrador activado. Ahora puedes eliminar puntos desde sus popups.');
+    alert('🔓 Modo administrador activado. Ahora puedes eliminar y editar puntos desde sus popups.');
   } else {
     alert('❌ Contraseña incorrecta.');
   }
@@ -629,6 +632,11 @@ btnGuardar.addEventListener('click', function() {
 btnCancelar.addEventListener('click', function() {
   const btnRegistro = document.getElementById('btnRegistrarVoluntario');
   if (btnRegistro) return;
+  const btnEdicion = document.getElementById('btnGuardarEdicion');
+  if (btnEdicion) {
+    document.getElementById('btnCancelarEdicion').click();
+    return;
+  }
   formulario.style.display = 'none';
   desactivarSeleccion();
   ubicacionSeleccionada = null;
@@ -664,6 +672,10 @@ document.querySelectorAll('#filtros .filtro-btn').forEach(btn => {
     aplicarFiltros();
   });
 });
+// ============================================================
+// MAPAVIDA - APP COMPLETA (BLOQUE 3)
+// VOLUNTARIADO INFANTIL, NAVEGACIÓN, EDICIÓN DE PUNTOS
+// ============================================================
 
 // --- VOLUNTARIO INFANTIL ---
 function mostrarFormularioVoluntarioInfantil(puntoId) {
@@ -805,15 +817,119 @@ function cancelarNavegacion() {
   alert('🧭 Navegación cancelada');
 }
 
-// --- INICIO ---
-document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('btnAdmin').style.display = 'block';
-});
-cargarPuntos();
-obtenerUbicacion();
-console.log('✅ App completa con definiciones, protección infantil, navegación y transporte de suministros');
+// --- EDICIÓN DE PUNTOS (SOLO ADMIN) ---
+function mostrarFormularioEdicionPunto(puntoId) {
+  const punto = todosLosPuntos.find(p => p.id === puntoId);
+  if (!punto) { alert('❌ Punto no encontrado'); return; }
+  if (!modoAdmin) { alert('🔐 Solo el administrador puede editar puntos.'); return; }
+
+  const tipo = TIPOS[punto.tipo];
+  if (!tipo) return;
+
+  const datosActuales = {};
+  tipo.campos.forEach(campo => {
+    datosActuales[campo.id] = punto.informacion[campo.id] || '';
+  });
+  const direccion = punto.informacion.direccion || '';
+
+  let html = `
+    <h3 style="color:#1a237e;">✏️ Editar ${tipo.label}</h3>
+    <p style="font-size:13px;color:#555;margin-bottom:10px;">
+      Modifica los campos y guarda los cambios.
+    </p>
+  `;
+
+  tipo.campos.forEach(campo => {
+    const valor = punto.informacion[campo.id] || '';
+    let input = '';
+    if (campo.type === 'textarea') {
+      input = `<textarea id="edit_${campo.id}" ${campo.required ? 'required' : ''}>${valor}</textarea>`;
+    } else if (campo.type === 'select') {
+      input = `<select id="edit_${campo.id}">`;
+      campo.options.forEach(opt => {
+        const selected = opt === valor ? 'selected' : '';
+        input += `<option value="${opt}" ${selected}>${opt}</option>`;
+      });
+      input += `</select>`;
+    } else {
+      input = `<input type="${campo.type}" id="edit_${campo.id}" value="${valor}" ${campo.required ? 'required' : ''}>`;
+    }
+    html += `<label>${campo.label}</label>${input}`;
+  });
+
+  if (!tipo.campos.find(c => c.id === 'direccion')) {
+    html += `
+      <label>Dirección</label>
+      <input type="text" id="edit_direccion" value="${direccion}" />
+    `;
+  }
+
+  html += `
+    <button id="btnGuardarEdicion" data-id="${puntoId}" style="margin-top:12px;background:#1a237e;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">
+      💾 Guardar cambios
+    </button>
+    <button id="btnCancelarEdicion" style="margin-top:6px;background:#666;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">
+      ❌ Cancelar
+    </button>
+  `;
+
+  formTitulo.innerHTML = `✏️ Editando: ${punto.nombre}`;
+  camposDinamicos.innerHTML = html;
+  formulario.style.display = 'block';
+  btnGuardar.style.display = 'none';
+  btnEliminar.style.display = 'none';
+  btnCancelar.style.display = 'none';
+
+  document.getElementById('btnGuardarEdicion').addEventListener('click', function() {
+    const datosEditados = {};
+    let valido = true;
+    tipo.campos.forEach(campo => {
+      const el = document.getElementById(`edit_${campo.id}`);
+      if (!el) return;
+      const valor = el.value.trim();
+      if (campo.required && !valor) {
+        alert(`El campo "${campo.label}" es obligatorio`);
+        valido = false;
+        return;
+      }
+      datosEditados[campo.id] = valor;
+    });
+    if (!valido) return;
+
+    const nuevaInformacion = tipo.procesar(datosEditados);
+    if (punto.informacion.voluntarios_infantiles) {
+      nuevaInformacion.voluntarios_infantiles = punto.informacion.voluntarios_infantiles;
+    }
+    if (punto.informacion.envios) {
+      nuevaInformacion.envios = punto.informacion.envios;
+    }
+    if (punto.informacion.recogido !== undefined) {
+      nuevaInformacion.recogido = punto.informacion.recogido;
+    }
+    const dirEl = document.getElementById('edit_direccion');
+    nuevaInformacion.direccion = dirEl ? dirEl.value.trim() : datosEditados.direccion || '';
+
+    punto.informacion = nuevaInformacion;
+    if (datosEditados.nombre) {
+      punto.nombre = datosEditados.nombre;
+    }
+
+    guardarPuntos();
+    alert('✅ Punto actualizado exitosamente');
+    formulario.style.display = 'none';
+    btnGuardar.style.display = 'block';
+    btnCancelar.style.display = 'block';
+    aplicarFiltros();
+  });
+
+  document.getElementById('btnCancelarEdicion').addEventListener('click', function() {
+    formulario.style.display = 'none';
+    btnGuardar.style.display = 'block';
+    btnCancelar.style.display = 'block';
+  });
+}
 // ============================================================
-// MAPAVIDA - APP COMPLETA (BLOQUE 3)
+// MAPAVIDA - APP COMPLETA (BLOQUE 4)
 // TRANSPORTE DE SUMINISTROS CON INCIDENCIAS
 // ============================================================
 
@@ -991,13 +1107,11 @@ function agregarMarcadorEnvio(envio) {
 
 function reportarIncidencia(envioId) {
   let envioEncontrado = null;
-  let puntoPadre = null;
   for (const punto of todosLosPuntos) {
     if (punto.informacion?.envios) {
       const encontrado = punto.informacion.envios.find(e => e.id === envioId);
       if (encontrado) {
         envioEncontrado = encontrado;
-        puntoPadre = punto;
         break;
       }
     }
@@ -1105,4 +1219,10 @@ function marcarEnvioEntregado(envioId) {
   }
 }
 
-console.log('✅ Módulo de transporte de suministros cargado');
+// --- INICIO ---
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('btnAdmin').style.display = 'block';
+});
+cargarPuntos();
+obtenerUbicacion();
+console.log('✅ App completa con definiciones, protección infantil, navegación, edición y transporte de suministros');
