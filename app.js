@@ -1,20 +1,31 @@
 // ============================================================
-// MAPAVIDA - BLOQUE 1: CONFIGURACIÓN, DEFINICIONES Y TIPOS
+// MAPAVIDA - BLOQUE 1: CONFIGURACIÓN DE FIREBASE Y TIPOS
 // ============================================================
 
 // ============================================================
-// CONFIGURACIÓN DE SUPABASE (AUTENTICACIÓN)
+// CONFIGURACIÓN DE FIREBASE (USANDO TUS DATOS)
 // ============================================================
-const SUPABASE_URL = 'https://gtaadqluoljexglenbqo.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_n_h1fN6QWuEWbFxrCTKFvQ_rxw-o9-Y'; // <--- REEMPLAZA CON TU CLAVE
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const firebaseConfig = {
+  apiKey: "AIzaSyDYNl6DCmxJLkc0HlnvkcEZ3L9J1agMl_c",
+  authDomain: "mapavida.firebaseapp.com",
+  projectId: "mapavida",
+  storageBucket: "mapavida.firebasestorage.app",
+  messagingSenderId: "125215899478",
+  appId: "1:125215899478:web:9018255a56f1f3ee3d60f7",
+  measurementId: "G-8PCPJ68R4Y"
+};
+
+// Inicializar Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
 // ============================================================
 // CONFIGURACIÓN GENERAL
 // ============================================================
-const ADMIN_PASSWORD = 'MapaVida2026'; // Respaldo (no se usa si hay autenticación)
+const ADMIN_PASSWORD = 'MapaVida2026'; // Contraseña de administrador local
 const MASTER_PASSWORD = 'SeguridadMapa2026';
 
+// MAPA (siempre carga)
 const map = L.map('map').setView([10.4806, -66.9036], 12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
@@ -33,8 +44,7 @@ let modoAdmin = false;
 let puntoEnEdicion = null;
 let controlRuta = null;
 let modoNavegacion = false;
-let sessionUser = null; // Usuario autenticado
-let filtroLista = 'todos'; // Filtro para la lista de puntos
+let filtroLista = 'todos';
 
 document.getElementById('cargando').style.display = 'none';
 
@@ -67,7 +77,7 @@ const DEFINICIONES = {
 };
 
 // ============================================================
-// TIPOS DE PUNTOS (CON SANITIZACIÓN)
+// TIPOS DE PUNTOS (con sanitización)
 // ============================================================
 const TIPOS = {
   refugio: {
@@ -324,6 +334,199 @@ const TIPOS = {
     }),
     popupDetalle: (info) => {
       let html = '';
+      if (info.suficientes?.length) html += `<div class="popup-info" style="color:#2e7d32;">✅ Ya no necesitan: ${sanitizar(info.suficientes.join(', '))}</div>`;
+      if (info.necesidad_infantil) {
+        html += `<div class="popup-info" style="color:#FF6F00;">🧸 Necesitan recreación/cuidado para niños</div>`;
+      }
+      return html;
+    }
+  },
+  hospital: {
+    label: 'Hospital', color: '#1976D2', icono: '🏥', requiereAdmin: false,
+    definicion: DEFINICIONES.hospital,
+    campos: [
+      { id: 'nombre', label: 'Nombre del hospital *', type: 'text', required: true },
+      { id: 'direccion', label: 'Dirección', type: 'text', required: false },
+      { id: 'medicamentos', label: 'Medicamentos necesarios (separados por comas)', type: 'textarea', required: false },
+      { id: 'sangre', label: '¿Necesitan donaciones de sangre?', type: 'select', options: ['No', 'Sí'], required: false },
+      { id: 'nombre_registrador', label: 'Tu nombre completo *', type: 'text', required: true },
+      { id: 'rol_registrador', label: 'Tu rol *', type: 'select', options: ['Voluntario', 'Coordinador', 'Líder comunitario', 'Rescatista', 'Personal de salud', 'Otro'], required: true },
+      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
+      { id: 'necesidades', label: 'Necesidades detalladas (una por línea)', type: 'textarea', required: false }
+    ],
+    procesar: (d) => ({
+      medicamentos: sanitizarArray(d.medicamentos ? d.medicamentos.split(',').map(s => s.trim()).filter(Boolean) : []),
+      necesita_sangre: d.sangre === 'Sí',
+      nombre_registrador: sanitizar(d.nombre_registrador || ''),
+      rol_registrador: sanitizar(d.rol_registrador || 'Voluntario'),
+      urgente: d.urgente === 'Sí',
+      necesidades: sanitizarArray(d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []),
+      fecha_creacion: new Date().toLocaleString(),
+      fecha_edicion: new Date().toLocaleString()
+    }),
+    popupDetalle: (info) => {
+      let html = '';
+      if (info.medicamentos?.length) html += `<div class="popup-info">💊 Medicamentos: ${sanitizar(info.medicamentos.join(', '))}</div>`;
+      if (info.necesita_sangre) html += `<div class="popup-info" style="color:#d32f2f;">🩸 ¡Urgen donaciones de sangre!</div>`;
+      return html;
+    }
+  },
+  edificio_caido: {
+    label: 'Edificio caído', color: '#C62828', icono: '💥', requiereAdmin: false,
+    definicion: DEFINICIONES.edificio_caido,
+    campos: [
+      { id: 'nombre', label: 'Ubicación / referencia *', type: 'text', required: true },
+      { id: 'apoyo', label: '¿Qué apoyo necesitan? (ej: agua, comida, escombros)', type: 'textarea', required: false },
+      { id: 'nombre_registrador', label: 'Tu nombre completo *', type: 'text', required: true },
+      { id: 'rol_registrador', label: 'Tu rol *', type: 'select', options: ['Voluntario', 'Coordinador', 'Líder comunitario', 'Rescatista', 'Personal de salud', 'Otro'], required: true },
+      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
+      { id: 'necesidades', label: 'Necesidades detalladas (una por línea)', type: 'textarea', required: false }
+    ],
+    procesar: (d) => ({
+      apoyo: sanitizarArray(d.apoyo ? d.apoyo.split(',').map(s => s.trim()).filter(Boolean) : []),
+      nombre_registrador: sanitizar(d.nombre_registrador || ''),
+      rol_registrador: sanitizar(d.rol_registrador || 'Voluntario'),
+      urgente: d.urgente === 'Sí',
+      recogido: false,
+      necesidades: sanitizarArray(d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []),
+      fecha_creacion: new Date().toLocaleString(),
+      fecha_edicion: new Date().toLocaleString()
+    }),
+    popupDetalle: (info) => {
+      let html = `<div class="popup-info" style="color:#C62828;">⚠️ Edificio colapsado</div>`;
+      if (info.recogido) html += `<div class="popup-info" style="color:#2e7d32;">✅ Ya recogido y limpiado</div>`;
+      return html;
+    }
+  },
+  peligro_derrumbe: {
+    label: 'Peligro de derrumbe', color: '#E65100', icono: '⚠️', requiereAdmin: false,
+    definicion: DEFINICIONES.peligro_derrumbe,
+    campos: [
+      { id: 'nombre', label: 'Ubicación / referencia *', type: 'text', required: true },
+      { id: 'advertencia', label: 'Advertencia adicional (opcional)', type: 'textarea', required: false },
+      { id: 'nombre_registrador', label: 'Tu nombre completo *', type: 'text', required: true },
+      { id: 'rol_registrador', label: 'Tu rol *', type: 'select', options: ['Voluntario', 'Coordinador', 'Líder comunitario', 'Rescatista', 'Personal de salud', 'Otro'], required: true },
+      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
+      { id: 'necesidades', label: 'Necesidades detalladas (una por línea)', type: 'textarea', required: false }
+    ],
+    procesar: (d) => ({
+      advertencia: sanitizar(d.advertencia || 'Manténgase alejado, estructura inestable'),
+      nombre_registrador: sanitizar(d.nombre_registrador || ''),
+      rol_registrador: sanitizar(d.rol_registrador || 'Voluntario'),
+      urgente: d.urgente === 'Sí',
+      necesidades: sanitizarArray(d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []),
+      fecha_creacion: new Date().toLocaleString(),
+      fecha_edicion: new Date().toLocaleString()
+    }),
+    popupDetalle: (info) => `<div class="popup-advertencia">⚠️ ${sanitizar(info.advertencia)}</div>`
+  },
+  sin_inspeccionar: {
+    label: 'Sin inspeccionar', color: '#6A1B9A', icono: '❓', requiereAdmin: false,
+    definicion: DEFINICIONES.sin_inspeccionar,
+    campos: [
+      { id: 'nombre', label: 'Ubicación / referencia *', type: 'text', required: true },
+      { id: 'nota', label: 'Nota adicional (opcional)', type: 'textarea', required: false },
+      { id: 'nombre_registrador', label: 'Tu nombre completo *', type: 'text', required: true },
+      { id: 'rol_registrador', label: 'Tu rol *', type: 'select', options: ['Voluntario', 'Coordinador', 'Líder comunitario', 'Rescatista', 'Personal de salud', 'Otro'], required: true },
+      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
+      { id: 'necesidades', label: 'Necesidades detalladas (una por línea)', type: 'textarea', required: false }
+    ],
+    procesar: (d) => ({
+      mensaje: sanitizar(d.nota || 'Estructura no ha sido inspeccionada por personal autorizado'),
+      nombre_registrador: sanitizar(d.nombre_registrador || ''),
+      rol_registrador: sanitizar(d.rol_registrador || 'Voluntario'),
+      urgente: d.urgente === 'Sí',
+      necesidades: sanitizarArray(d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []),
+      fecha_creacion: new Date().toLocaleString(),
+      fecha_edicion: new Date().toLocaleString()
+    }),
+    popupDetalle: (info) => `<div class="popup-info" style="color:#6A1B9A;">❓ ${sanitizar(info.mensaje)}</div>`
+  },
+  veterinaria: {
+    label: 'Atención veterinaria', color: '#00897B', icono: '🐾', requiereAdmin: false,
+    definicion: DEFINICIONES.veterinaria,
+    campos: [
+      { id: 'nombre', label: 'Nombre del centro veterinario *', type: 'text', required: true },
+      { id: 'direccion', label: 'Dirección', type: 'text', required: false },
+      { id: 'servicios', label: 'Servicios que ofrecen (separados por comas)', type: 'textarea', required: false },
+      { id: 'emergencia', label: '¿Atienden emergencias 24h?', type: 'select', options: ['No', 'Sí'], required: false },
+      { id: 'nombre_registrador', label: 'Tu nombre completo *', type: 'text', required: true },
+      { id: 'rol_registrador', label: 'Tu rol *', type: 'select', options: ['Voluntario', 'Coordinador', 'Líder comunitario', 'Rescatista', 'Personal de salud', 'Otro'], required: true },
+      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
+      { id: 'necesidades', label: 'Necesidades detalladas (una por línea)', type: 'textarea', required: false }
+    ],
+    procesar: (d) => ({
+      servicios: sanitizarArray(d.servicios ? d.servicios.split(',').map(s => s.trim()).filter(Boolean) : []),
+      emergencia_24h: d.emergencia === 'Sí',
+      nombre_registrador: sanitizar(d.nombre_registrador || ''),
+      rol_registrador: sanitizar(d.rol_registrador || 'Voluntario'),
+      urgente: d.urgente === 'Sí',
+      necesidades: sanitizarArray(d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []),
+      fecha_creacion: new Date().toLocaleString(),
+      fecha_edicion: new Date().toLocaleString()
+    }),
+    popupDetalle: (info) => {
+      let html = '';
+      if (info.servicios?.length) html += `<div class="popup-info">🩺 Servicios: ${sanitizar(info.servicios.join(', '))}</div>`;
+      if (info.emergencia_24h) html += `<div class="popup-info" style="color:#00897B;">🕐 Atención 24h</div>`;
+      return html;
+    }
+  },
+  ayuda_psicologica: {
+    label: 'Ayuda psicológica', color: '#8E24AA', icono: '🧠', requiereAdmin: true,
+    definicion: DEFINICIONES.ayuda_psicologica,
+    campos: [
+      { id: 'nombre', label: 'Nombre del centro / profesional *', type: 'text', required: true },
+      { id: 'direccion', label: 'Dirección', type: 'text', required: false },
+      { id: 'horario', label: 'Horario de atención', type: 'text', required: false },
+      { id: 'contacto', label: 'Teléfono de contacto', type: 'text', required: false },
+      { id: 'nombre_registrador', label: 'Tu nombre completo *', type: 'text', required: true },
+      { id: 'rol_registrador', label: 'Tu rol *', type: 'select', options: ['Voluntario', 'Coordinador', 'Líder comunitario', 'Rescatista', 'Personal de salud', 'Otro'], required: true },
+      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
+      { id: 'necesidades', label: 'Información adicional (una por línea)', type: 'textarea', required: false }
+    ],
+    procesar: (d) => ({
+      horario: sanitizar(d.horario || ''),
+      contacto: sanitizar(d.contacto || ''),
+      nombre_registrador: sanitizar(d.nombre_registrador || ''),
+      rol_registrador: sanitizar(d.rol_registrador || 'Voluntario'),
+      urgente: d.urgente === 'Sí',
+      necesidades: sanitizarArray(d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []),
+      fecha_creacion: new Date().toLocaleString(),
+      fecha_edicion: new Date().toLocaleString()
+    }),
+    popupDetalle: (info) => {
+      let html = '';
+      if (info.horario) html += `<div class="popup-info">🕐 Horario: ${sanitizar(info.horario)}</div>`;
+      if (info.contacto) html += `<div class="popup-info">📞 Contacto: ${sanitizar(info.contacto)}</div>`;
+      return html;
+    }
+  },
+  vacuna_tetanos: {
+    label: 'Vacunación antitetánica', color: '#0D47A1', icono: '💉', requiereAdmin: true,
+    definicion: DEFINICIONES.vacuna_tetanos,
+    campos: [
+      { id: 'nombre', label: 'Nombre del punto de vacunación *', type: 'text', required: true },
+      { id: 'direccion', label: 'Dirección', type: 'text', required: false },
+      { id: 'horario', label: 'Horario de aplicación', type: 'text', required: false },
+      { id: 'contacto', label: 'Teléfono de contacto', type: 'text', required: false },
+      { id: 'nombre_registrador', label: 'Tu nombre completo *', type: 'text', required: true },
+      { id: 'rol_registrador', label: 'Tu rol *', type: 'select', options: ['Voluntario', 'Coordinador', 'Líder comunitario', 'Rescatista', 'Personal de salud', 'Otro'], required: true },
+      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
+      { id: 'necesidades', label: 'Información adicional (una por línea)', type: 'textarea', required: false }
+    ],
+    procesar: (d) => ({
+      horario: sanitizar(d.horario || ''),
+      contacto: sanitizar(d.contacto || ''),
+      nombre_registrador: sanitizar(d.nombre_registrador || ''),
+      rol_registrador: sanitizar(d.rol_registrador || 'Voluntario'),
+      urgente: d.urgente === 'Sí',
+      necesidades: sanitizarArray(d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []),
+      fecha_creacion: new Date().toLocaleString(),
+      fecha_edicion: new Date().toLocaleString()
+    }),
+    popupDetalle: (info) => {
+      let html = '';
       if (info.horario) html += `<div class="popup-info">🕐 Horario: ${sanitizar(info.horario)}</div>`;
       if (info.contacto) html += `<div class="popup-info">📞 Contacto: ${sanitizar(info.contacto)}</div>`;
       return html;
@@ -331,188 +534,193 @@ const TIPOS = {
   }
 };
 // ============================================================
-// BLOQUE 2: AUTENTICACIÓN, CARGA Y GUARDADO CON SUPABASE
+// BLOQUE 2: FUNCIONES DE LECTURA/ESCRITURA CON FIRESTORE
 // ============================================================
 
-// --- AUTENTICACIÓN ---
-async function loginAdmin(email, password) {
+// --- CARGAR PUNTOS DESDE FIRESTORE ---
+async function cargarPuntos() {
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    sessionUser = data.user;
-    // Verificar si el usuario es administrador
-    const { data: adminData, error: adminError } = await supabase
-      .from('administradores')
-      .select('email')
-      .eq('email', email)
-      .single();
-    if (adminError || !adminData) {
-      await supabase.auth.signOut();
-      sessionUser = null;
-      throw new Error('No tienes permisos de administrador.');
+    const snapshot = await db.collection('puntos')
+      .orderBy('created_at', 'desc')
+      .get();
+    
+    if (snapshot.empty) {
+      cargarLocales();
+      return;
     }
+    
+    todosLosPuntos = [];
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      todosLosPuntos.push({
+        id: doc.id,
+        tipo: data.tipo || '',
+        nombre: data.nombre || '',
+        lat: data.lat || 0,
+        lng: data.lng || 0,
+        informacion: data.informacion || {},
+        user_id: data.user_id || null
+      });
+    });
+    aplicarFiltros();
+    console.log('✅ Datos cargados desde Firestore');
+  } catch (error) {
+    console.error('❌ Error al cargar desde Firestore:', error);
+    cargarLocales();
+  }
+}
+
+function cargarLocales() {
+  const stored = localStorage.getItem('puntosMapaVida');
+  if (stored) {
+    try {
+      todosLosPuntos = JSON.parse(stored);
+      aplicarFiltros();
+      console.log('⚠️ Usando datos locales');
+    } catch (e) {
+      todosLosPuntos = [];
+      aplicarFiltros();
+    }
+  } else {
+    // Datos de ejemplo
+    todosLosPuntos = [
+      {
+        id: '1', tipo: 'refugio', nombre: 'Refugio Los Rosales',
+        lat: 10.4910, lng: -66.8730,
+        informacion: {
+          direccion: 'Av. Principal',
+          cupo: 150,
+          urgente: true,
+          necesidad_infantil: true,
+          necesidades: ['Agua', 'Comida', 'Colchonetas'],
+          nombre_registrador: 'Juan Pérez',
+          rol_registrador: 'Coordinador',
+          voluntarios_infantiles: [],
+          fecha_creacion: new Date().toLocaleString(),
+          fecha_edicion: new Date().toLocaleString()
+        },
+        user_id: null
+      }
+    ];
+    localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
+    aplicarFiltros();
+  }
+}
+
+// --- GUARDAR PUNTOS EN FIRESTORE ---
+async function guardarPuntos() {
+  try {
+    for (const punto of todosLosPuntos) {
+      const data = {
+        tipo: punto.tipo,
+        nombre: punto.nombre,
+        lat: punto.lat,
+        lng: punto.lng,
+        informacion: punto.informacion,
+        user_id: punto.user_id || null,
+        created_at: punto.informacion?.fecha_creacion || new Date().toISOString()
+      };
+      
+      if (punto.id && punto.id.length > 10) {
+        // Si tiene ID de Firestore (20 caracteres), actualizar
+        await db.collection('puntos').doc(punto.id).set(data, { merge: true });
+      } else {
+        // Crear nuevo documento
+        const docRef = await db.collection('puntos').add(data);
+        punto.id = docRef.id;
+      }
+    }
+    localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
+    console.log('✅ Datos sincronizados con Firestore');
+  } catch (error) {
+    console.error('❌ Error al guardar en Firestore:', error);
+    localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
+    alert('⚠️ Datos guardados solo localmente (falló la nube)');
+  }
+}
+
+// --- ELIMINAR PUNTO EN FIRESTORE ---
+async function eliminarPunto(id) {
+  if (!modoAdmin) {
+    alert('🔐 Solo los administradores pueden eliminar puntos.');
+    return;
+  }
+  if (!confirm('¿Seguro que quieres eliminar este punto de forma permanente?')) return;
+  
+  try {
+    await db.collection('puntos').doc(id).delete();
+    todosLosPuntos = todosLosPuntos.filter(p => p.id !== id);
+    localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
+    aplicarFiltros();
+    alert('🗑️ Punto eliminado.');
+  } catch (error) {
+    console.error('❌ Error al eliminar:', error);
+    alert('❌ Error al eliminar. Intenta de nuevo.');
+  }
+}
+
+// --- MARCAR EDIFICIO COMO RECOGIDO ---
+async function marcarRecogido(id) {
+  if (!modoAdmin) {
+    alert('🔐 Solo los administradores pueden marcar como recogido.');
+    return;
+  }
+  const punto = todosLosPuntos.find(p => p.id === id);
+  if (!punto || punto.tipo !== 'edificio_caido' || punto.informacion.recogido) return;
+  
+  punto.informacion.recogido = true;
+  punto.informacion.fecha_edicion = new Date().toLocaleString();
+  
+  try {
+    await db.collection('puntos').doc(id).update({
+      informacion: punto.informacion
+    });
+    localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
+    aplicarFiltros();
+    alert('✅ Edificio marcado como recogido.');
+  } catch (error) {
+    console.error('❌ Error al actualizar:', error);
+    alert('❌ Error al guardar en la nube.');
+  }
+}
+
+// --- AUTENTICACIÓN SIMPLE (con contraseña local) ---
+function loginAdmin(password) {
+  if (password === ADMIN_PASSWORD) {
     modoAdmin = true;
     document.getElementById('btnAdmin').textContent = '🔓 Administrador activo';
     document.getElementById('btnAdmin').style.background = '#2e7d32';
     document.getElementById('btnChat').style.display = 'block';
     document.getElementById('btnSeguridad').style.display = 'block';
     document.getElementById('btnEliminar').style.display = 'block';
-    document.getElementById('btnAuth').textContent = '🚪 Cerrar sesión';
     aplicarFiltros();
-    alert('✅ Sesión iniciada como administrador.');
-    return data;
-  } catch (error) {
-    alert('❌ Error al iniciar sesión: ' + error.message);
-    return null;
+    alert('✅ Modo administrador activado.');
+    return true;
+  } else {
+    alert('❌ Contraseña incorrecta.');
+    return false;
   }
 }
 
-async function logoutAdmin() {
-  await supabase.auth.signOut();
-  sessionUser = null;
+function logoutAdmin() {
   modoAdmin = false;
   document.getElementById('btnAdmin').textContent = '🔐 Administrar (desbloquear)';
   document.getElementById('btnAdmin').style.background = '#1a237e';
   document.getElementById('btnChat').style.display = 'none';
   document.getElementById('btnSeguridad').style.display = 'none';
   document.getElementById('btnEliminar').style.display = 'none';
-  document.getElementById('btnAuth').textContent = '🔐 Iniciar sesión';
   aplicarFiltros();
   alert('🔓 Sesión cerrada.');
 }
 
-// --- CARGAR PUNTOS DESDE SUPABASE ---
-async function cargarPuntos() {
-  try {
-    const { data, error } = await supabase
-      .from('puntos')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (error) throw error;
-    todosLosPuntos = data || [];
-    aplicarFiltros();
-    console.log('✅ Datos cargados desde Supabase');
-  } catch (error) {
-    console.error('❌ Error al cargar desde Supabase:', error);
-    // Fallback a localStorage
-    const stored = localStorage.getItem('puntosMapaVida');
-    if (stored) {
-      try {
-        todosLosPuntos = JSON.parse(stored);
-        aplicarFiltros();
-        alert('⚠️ Usando datos locales (falló la conexión a la nube)');
-      } catch (e) {
-        todosLosPuntos = [];
-      }
-    } else {
-      // Datos de ejemplo
-      todosLosPuntos = [
-        {
-          id: '1', tipo: 'refugio', nombre: 'Refugio Los Rosales',
-          lat: 10.4910, lng: -66.8730,
-          informacion: {
-            direccion: 'Av. Principal',
-            cupo: 150,
-            urgente: true,
-            necesidad_infantil: true,
-            necesidades: ['Agua', 'Comida', 'Colchonetas'],
-            nombre_registrador: 'Juan Pérez',
-            rol_registrador: 'Coordinador',
-            voluntarios_infantiles: [],
-            fecha_creacion: new Date().toLocaleString(),
-            fecha_edicion: new Date().toLocaleString()
-          },
-          user_id: null
-        }
-      ];
-      localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
-      aplicarFiltros();
-    }
-  }
-}
-
-// --- GUARDAR PUNTOS EN SUPABASE (con usuario autenticado) ---
-async function guardarPuntos() {
-  try {
-    for (const punto of todosLosPuntos) {
-      const { error } = await supabase
-        .from('puntos')
-        .upsert({
-          id: punto.id,
-          tipo: punto.tipo,
-          nombre: punto.nombre,
-          lat: punto.lat,
-          lng: punto.lng,
-          informacion: punto.informacion,
-          user_id: sessionUser ? sessionUser.id : null
-        }, { onConflict: 'id' });
-      if (error) throw error;
-    }
-    localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
-    console.log('✅ Datos sincronizados con Supabase');
-  } catch (error) {
-    console.error('❌ Error al guardar en Supabase:', error);
-    localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
-    alert('⚠️ Datos guardados solo localmente (falló la nube)');
-  }
-}
-
-// --- FUNCIONES AUXILIARES ---
-async function actualizarInterfaz() {
-  await cargarPuntos();
-  aplicarFiltros();
-}
-
-// --- VERIFICAR SESIÓN AL CARGAR ---
-async function verificarSesion() {
-  const { data, error } = await supabase.auth.getSession();
-  if (error) return;
-  if (data.session) {
-    sessionUser = data.session.user;
-    const { data: adminData } = await supabase
-      .from('administradores')
-      .select('email')
-      .eq('email', sessionUser.email)
-      .single();
-    if (adminData) {
-      modoAdmin = true;
-      document.getElementById('btnAdmin').textContent = '🔓 Administrador activo';
-      document.getElementById('btnAdmin').style.background = '#2e7d32';
-      document.getElementById('btnChat').style.display = 'block';
-      document.getElementById('btnSeguridad').style.display = 'block';
-      document.getElementById('btnEliminar').style.display = 'block';
-      document.getElementById('btnAuth').textContent = '🚪 Cerrar sesión';
-      aplicarFiltros();
-    }
-  }
-}
-
 // --- EVENTOS DE AUTENTICACIÓN ---
 document.getElementById('btnAuth').addEventListener('click', function() {
-  if (sessionUser) {
+  if (modoAdmin) {
     logoutAdmin();
   } else {
-    document.getElementById('panelLogin').style.display = 'block';
+    const pass = prompt('🔐 Ingresa la contraseña de administrador:');
+    if (pass !== null) loginAdmin(pass);
   }
-});
-
-document.getElementById('btnLogin').addEventListener('click', async function() {
-  const email = document.getElementById('loginEmail').value.trim();
-  const password = document.getElementById('loginPassword').value.trim();
-  if (!email || !password) {
-    alert('❌ Completa todos los campos');
-    return;
-  }
-  await loginAdmin(email, password);
-  document.getElementById('panelLogin').style.display = 'none';
-  document.getElementById('loginEmail').value = '';
-  document.getElementById('loginPassword').value = '';
-});
-
-document.getElementById('btnCerrarLogin').addEventListener('click', function() {
-  document.getElementById('panelLogin').style.display = 'none';
-  document.getElementById('loginEmail').value = '';
-  document.getElementById('loginPassword').value = '';
 });
 // ============================================================
 // BLOQUE 3: MAPA, FILTROS Y MOSTRAR PUNTOS (CON SANITIZACIÓN)
