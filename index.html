@@ -10,7 +10,7 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: #1a1a1a; }
-    #map { height: 90vh; width: 100%; }
+    #map { height: 70vh; width: 100%; }
     #header {
       background: #E53935;
       color: white;
@@ -21,7 +21,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      height: 10vh;
+      height: 8vh;
     }
     #header button {
       background: white;
@@ -34,6 +34,38 @@
     }
     .leaflet-popup-content { font-size: 14px; }
     .cupo { font-weight: bold; color: #2e7d32; }
+    
+    /* Estilos del formulario */
+    #formulario {
+      display: none;
+      background: white;
+      padding: 20px;
+      margin: 10px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+    #formulario input {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    #formulario button {
+      background: #E53935;
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 5px;
+      font-weight: bold;
+      width: 100%;
+      margin-top: 5px;
+      cursor: pointer;
+    }
+    #formulario button[type="button"] {
+      background: #666;
+    }
+    .visible { display: block !important; }
   </style>
 </head>
 <body>
@@ -43,12 +75,23 @@
   </div>
   <div id="map"></div>
 
+  <!-- FORMULARIO PARA AGREGAR REFUGIOS -->
+  <div id="formulario">
+    <h3>📝 Agregar Refugio</h3>
+    <input type="text" id="fNombre" placeholder="Nombre del refugio" required>
+    <input type="text" id="fDireccion" placeholder="Dirección">
+    <input type="number" id="fLat" placeholder="Latitud (ej: 10.4910)" step="any" required>
+    <input type="number" id="fLng" placeholder="Longitud (ej: -66.8730)" step="any" required>
+    <input type="number" id="fCupo" placeholder="Cupo disponible">
+    <button id="btnGuardar">✅ Guardar Refugio</button>
+    <button id="btnCancelar" type="button">❌ Cancelar</button>
+  </div>
+
   <script>
     // 🔥 CONFIGURACIÓN DE SUPABASE (REEMPLAZA CON TUS LLAVES)
-    const SUPABASE_URL = 'https://gtaadqluoljexglenbqo.supabase.co'; // <--- PON AQUÍ TU URL
-    const SUPABASE_ANON_KEY = 'sb_publishable_n_h1fN6QWuEWbFxrCTKFvQ_rxw-o9-Y'; // <--- PON AQUÍ TU CLAVE
+    const SUPABASE_URL = 'https://gtaadqluoljexglenbqo.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_n_h1fN6QWuEWbFxrCTKFvQ_rxw-o9-Y';
 
-    // Inicializar Supabase
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // Inicializar mapa
@@ -90,34 +133,52 @@
       });
     }
 
-    // ASIGNAR EVENTO AL BOTÓN (CON DEPURACIÓN)
-    const btn = document.getElementById('btnAgregar');
-    if (btn) {
-      btn.addEventListener('click', function() {
-        const nombre = prompt('Nombre del refugio:');
-        if (!nombre) return;
-        const direccion = prompt('Dirección:');
-        const lat = parseFloat(prompt('Latitud (ej: 10.4910):'));
-        const lng = parseFloat(prompt('Longitud (ej: -66.8730):'));
-        if (isNaN(lat) || isNaN(lng)) return alert('Coordenadas inválidas');
-        const cupo = parseInt(prompt('Cupo disponible:')) || 0;
+    // Mostrar/ocultar formulario
+    const formulario = document.getElementById('formulario');
+    const btnAgregar = document.getElementById('btnAgregar');
+    const btnCancelar = document.getElementById('btnCancelar');
 
-        supabase
-          .from('refugios')
-          .insert([{ nombre, direccion, lat, lng, cupo }])
-          .then(({ error }) => {
-            if (error) {
-              alert('Error al guardar: ' + error.message);
-            } else {
-              alert('¡Refugio agregado exitosamente!');
-              cargarRefugios();
-            }
-          })
-          .catch(err => alert('Error de red: ' + err.message));
-      });
-    } else {
-      alert('ERROR: Botón no encontrado en el DOM');
+    btnAgregar.addEventListener('click', () => {
+      formulario.classList.toggle('visible');
+    });
+
+    btnCancelar.addEventListener('click', () => {
+      formulario.classList.remove('visible');
+      limpiarFormulario();
+    });
+
+    function limpiarFormulario() {
+      document.getElementById('fNombre').value = '';
+      document.getElementById('fDireccion').value = '';
+      document.getElementById('fLat').value = '';
+      document.getElementById('fLng').value = '';
+      document.getElementById('fCupo').value = '';
     }
+
+    // Guardar refugio
+    document.getElementById('btnGuardar').addEventListener('click', async () => {
+      const nombre = document.getElementById('fNombre').value.trim();
+      const direccion = document.getElementById('fDireccion').value.trim();
+      const lat = parseFloat(document.getElementById('fLat').value);
+      const lng = parseFloat(document.getElementById('fLng').value);
+      const cupo = parseInt(document.getElementById('fCupo').value) || 0;
+
+      if (!nombre) return alert('❌ El nombre es obligatorio');
+      if (isNaN(lat) || isNaN(lng)) return alert('❌ Coordenadas inválidas');
+
+      const { error } = await supabase
+        .from('refugios')
+        .insert([{ nombre, direccion, lat, lng, cupo }]);
+
+      if (error) {
+        alert('❌ Error al guardar: ' + error.message);
+      } else {
+        alert('✅ ¡Refugio agregado exitosamente!');
+        formulario.classList.remove('visible');
+        limpiarFormulario();
+        cargarRefugios();
+      }
+    });
 
     // Cargar refugios al inicio
     cargarRefugios();
