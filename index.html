@@ -1,223 +1,41 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>MapaVida - Refugios</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MapaVida - Prueba Mapa</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial, sans-serif; background: #1a1a1a; }
-    #map { height: 70vh; width: 100%; }
-    #header {
+    body { margin: 0; }
+    #map { height: 90vh; }
+    #btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      padding: 10px 20px;
       background: #E53935;
       color: white;
-      padding: 12px;
-      text-align: center;
-      font-weight: bold;
-      font-size: 18px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      height: 8vh;
-    }
-    #header button {
-      background: white;
       border: none;
-      padding: 6px 12px;
       border-radius: 20px;
       font-weight: bold;
-      color: #E53935;
       cursor: pointer;
     }
-    .leaflet-popup-content { font-size: 14px; }
-    .cupo { font-weight: bold; color: #2e7d32; }
-    
-    /* Formulario */
-    #formulario {
-      display: none;
-      background: white;
-      padding: 20px;
-      margin: 10px;
-      border-radius: 10px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-      position: relative;
-      z-index: 1000;
-    }
-    #formulario input {
-      width: 100%;
-      padding: 10px;
-      margin: 5px 0;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-    #formulario button {
-      background: #E53935;
-      color: white;
-      border: none;
-      padding: 10px;
-      border-radius: 5px;
-      font-weight: bold;
-      width: 100%;
-      margin-top: 5px;
-      cursor: pointer;
-    }
-    #formulario button[type="button"] {
-      background: #666;
-    }
-    .visible { display: block !important; }
   </style>
 </head>
 <body>
-  <div id="header">
-    <span>🆘 MapaVida</span>
-    <button id="btnAgregar" onclick="mostrarFormulario()">+ Agregar Refugio</button>
-  </div>
+  <button id="btn" onclick="alert('🔥 Botón clickeado')">+ Agregar Refugio</button>
   <div id="map"></div>
 
-  <!-- FORMULARIO -->
-  <div id="formulario">
-    <h3>📝 Agregar Refugio</h3>
-    <input type="text" id="fNombre" placeholder="Nombre del refugio" required>
-    <input type="text" id="fDireccion" placeholder="Dirección">
-    <input type="number" id="fLat" placeholder="Latitud (ej: 10.4910)" step="any" required>
-    <input type="number" id="fLng" placeholder="Longitud (ej: -66.8730)" step="any" required>
-    <input type="number" id="fCupo" placeholder="Cupo disponible">
-    <button onclick="guardarRefugio()">✅ Guardar Refugio</button>
-    <button onclick="cerrarFormulario()" type="button">❌ Cancelar</button>
-  </div>
-
   <script>
-    console.log('🚀 Script iniciado');
-
-    // 🔥 CONFIGURACIÓN DE SUPABASE (REEMPLAZA CON TUS LLAVES)
-    const SUPABASE_URL = 'https://gtaadqluoljexglenbqo.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_n_h1fN6QWuEWbFxrCTKFvQ_rxw-o9-Y';
-
-    console.log('✅ Llaves definidas');
-
-    // Inicializar Supabase
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    console.log('✅ Supabase inicializado');
-
-    // Inicializar mapa
+    alert('🚀 Script cargado');
     const map = L.map('map').setView([10.4806, -66.9036], 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: 'MapaVida'
     }).addTo(map);
-    console.log('✅ Mapa creado');
-
-    let markersLayer = L.layerGroup().addTo(map);
-
-    // Función para cargar refugios
-    async function cargarRefugios() {
-      console.log('🔄 Cargando refugios...');
-      try {
-        const { data, error } = await supabase.from('refugios').select('*');
-        if (error) throw error;
-        localStorage.setItem('refugiosCache', JSON.stringify(data));
-        mostrarRefugios(data);
-        console.log('✅ Refugios cargados:', data.length);
-      } catch (error) {
-        console.warn('⚠️ Error en red, usando caché:', error);
-        const cached = localStorage.getItem('refugiosCache');
-        if (cached) {
-          mostrarRefugios(JSON.parse(cached));
-          console.log('✅ Usando caché');
-        } else {
-          alert('No hay datos disponibles. Conéctate a internet.');
-        }
-      }
-    }
-
-    function mostrarRefugios(refugios) {
-      markersLayer.clearLayers();
-      refugios.forEach(r => {
-        const popupContent = `
-          <b>${r.nombre}</b><br>
-          ${r.direccion || 'Sin dirección'}<br>
-          <span class="cupo">Cupo: ${r.cupo || 0} personas</span>
-        `;
-        L.marker([r.lat, r.lng]).bindPopup(popupContent).addTo(markersLayer);
-      });
-    }
-
-    // Funciones globales para el formulario
-    function mostrarFormulario() {
-      console.log('📝 Mostrar formulario');
-      const formulario = document.getElementById('formulario');
-      formulario.classList.toggle('visible');
-      if (formulario.classList.contains('visible')) {
-        formulario.style.display = 'block';
-      } else {
-        formulario.style.display = 'none';
-      }
-    }
-
-    function cerrarFormulario() {
-      console.log('❌ Cerrar formulario');
-      const formulario = document.getElementById('formulario');
-      formulario.classList.remove('visible');
-      formulario.style.display = 'none';
-      limpiarFormulario();
-    }
-
-    function limpiarFormulario() {
-      document.getElementById('fNombre').value = '';
-      document.getElementById('fDireccion').value = '';
-      document.getElementById('fLat').value = '';
-      document.getElementById('fLng').value = '';
-      document.getElementById('fCupo').value = '';
-    }
-
-    async function guardarRefugio() {
-      console.log('💾 Guardando refugio...');
-      const nombre = document.getElementById('fNombre').value.trim();
-      const direccion = document.getElementById('fDireccion').value.trim();
-      const lat = parseFloat(document.getElementById('fLat').value);
-      const lng = parseFloat(document.getElementById('fLng').value);
-      const cupo = parseInt(document.getElementById('fCupo').value) || 0;
-
-      if (!nombre) {
-        alert('❌ El nombre es obligatorio');
-        return;
-      }
-      if (isNaN(lat) || isNaN(lng)) {
-        alert('❌ Coordenadas inválidas');
-        return;
-      }
-
-      console.log('📦 Datos a guardar:', { nombre, direccion, lat, lng, cupo });
-
-      const { error } = await supabase
-        .from('refugios')
-        .insert([{ nombre, direccion, lat, lng, cupo }]);
-
-      if (error) {
-        console.error('❌ Error de Supabase:', error);
-        alert('❌ Error al guardar: ' + error.message);
-      } else {
-        console.log('✅ Guardado exitoso');
-        alert('✅ ¡Refugio agregado exitosamente!');
-        cerrarFormulario();
-        cargarRefugios();
-      }
-    }
-
-    // Cargar refugios al inicio
-    cargarRefugios();
-
-    // Service Worker para offline
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js')
-        .then(() => console.log('✅ SW registrado'))
-        .catch(() => console.warn('⚠️ SW no disponible'));
-    }
-
-    console.log('🚀 Script completado');
+    alert('✅ Mapa creado');
   </script>
 </body>
 </html>
