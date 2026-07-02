@@ -550,7 +550,10 @@ function mostrarPuntos(puntos) {
 // BLOQUE 2B: LISTA, CONTADORES, DETALLE, URGENCIAS, GEOCODIFICACIÓN
 // ============================================================
 
-// --- CONTADORES ---
+// --- FILTRO DE LISTA (variable global) ---
+let filtroLista = 'todos';
+
+// --- ACTUALIZAR CONTADORES ---
 function actualizarContadores() {
   const contenedor = document.getElementById('contenedorContadores');
   if (!contenedor) return;
@@ -585,19 +588,42 @@ function actualizarContadores() {
   contenedor.innerHTML = html;
 }
 
-// --- LISTA DE PUNTOS ---
+// --- MOSTRAR LISTA DE PUNTOS CON FILTROS FUNCIONALES ---
 function mostrarListaPuntos() {
   const panel = document.getElementById('panelLista');
   panel.style.display = 'flex';
+  if (panel.classList.contains('panel-minimizado')) {
+    panel.classList.remove('panel-minimizado');
+    document.getElementById('btnMinimizarLista').textContent = '➖';
+  }
   actualizarContadores();
 
   const contenedor = document.getElementById('contenedorLista');
   if (!contenedor) return;
 
-  const puntosOrdenados = [...todosLosPuntos].reverse();
+  let puntosFiltrados = [...todosLosPuntos];
+  
+  switch (filtroLista) {
+    case 'todos':
+      break;
+    case 'urgentes':
+      puntosFiltrados = puntosFiltrados.filter(p => p.informacion?.urgente === true);
+      break;
+    case 'recogidos':
+      puntosFiltrados = puntosFiltrados.filter(p => p.tipo === 'edificio_caido' && p.informacion?.recogido === true);
+      break;
+    case 'no_recogidos':
+      puntosFiltrados = puntosFiltrados.filter(p => p.tipo === 'edificio_caido' && p.informacion?.recogido !== true);
+      break;
+    default:
+      puntosFiltrados = puntosFiltrados.filter(p => p.tipo === filtroLista);
+      break;
+  }
+
+  puntosFiltrados.reverse();
 
   let html = '';
-  puntosOrdenados.forEach(p => {
+  puntosFiltrados.forEach(p => {
     const tipo = TIPOS[p.tipo];
     if (!tipo) return;
     const esUrgente = p.informacion?.urgente || false;
@@ -616,8 +642,8 @@ function mostrarListaPuntos() {
     `;
   });
 
-  if (puntosOrdenados.length === 0) {
-    html = '<p style="text-align:center;color:#666;padding:40px;">No hay puntos registrados. ¡Agrega el primero!</p>';
+  if (puntosFiltrados.length === 0) {
+    html = '<p style="text-align:center;color:#666;padding:40px;">No hay puntos que coincidan con el filtro seleccionado.</p>';
   }
 
   contenedor.innerHTML = html;
@@ -637,6 +663,10 @@ function mostrarDetallePunto(id) {
 
   const panel = document.getElementById('panelDetalle');
   panel.style.display = 'flex';
+  if (panel.classList.contains('panel-minimizado')) {
+    panel.classList.remove('panel-minimizado');
+    document.getElementById('btnMinimizarDetalle').textContent = '➖';
+  }
   document.getElementById('detalleTitulo').textContent = `📌 ${punto.nombre}`;
 
   const tipo = TIPOS[punto.tipo];
@@ -760,6 +790,10 @@ function cerrarLista() {
 function mostrarUrgencias() {
   const panel = document.getElementById('panelUrgencias');
   panel.style.display = 'flex';
+  if (panel.classList.contains('panel-minimizado')) {
+    panel.classList.remove('panel-minimizado');
+    document.getElementById('btnMinimizarUrgencias').textContent = '➖';
+  }
 
   const contenedor = document.getElementById('contenedorUrgencias');
   if (!contenedor) return;
@@ -851,6 +885,72 @@ function obtenerDireccionDesdeCoordenadas(lat, lng) {
     campoDireccion.placeholder = 'Error al obtener dirección (escribe manual)';
   }
 }
+
+// --- EVENTOS DE FILTROS DE LISTA ---
+document.addEventListener('DOMContentLoaded', function() {
+  const filtrosLista = document.querySelectorAll('#filtrosLista button');
+  filtrosLista.forEach(btn => {
+    btn.addEventListener('click', function() {
+      filtrosLista.forEach(b => b.classList.remove('activo'));
+      this.classList.add('activo');
+      filtroLista = this.dataset.tipo;
+      mostrarListaPuntos();
+    });
+  });
+});
+// ============================================================
+// BLOQUE 2C: MINIMIZAR POPUPS
+// ============================================================
+
+function toggleMinimizar(panelId, botonId) {
+  const panel = document.getElementById(panelId);
+  const boton = document.getElementById(botonId);
+  if (!panel || !boton) return;
+
+  if (panel.classList.contains('panel-minimizado')) {
+    // Expandir
+    panel.classList.remove('panel-minimizado');
+    boton.textContent = '➖';
+    panel.style.height = '';
+    panel.style.minHeight = '';
+  } else {
+    // Minimizar
+    panel.classList.add('panel-minimizado');
+    boton.textContent = '➕';
+    panel.style.height = '50px';
+    panel.style.minHeight = '50px';
+  }
+}
+
+// Eventos de minimizar
+document.getElementById('btnMinimizarLista').addEventListener('click', function(e) {
+  e.stopPropagation();
+  toggleMinimizar('panelLista', 'btnMinimizarLista');
+});
+
+document.getElementById('btnMinimizarDetalle').addEventListener('click', function(e) {
+  e.stopPropagation();
+  toggleMinimizar('panelDetalle', 'btnMinimizarDetalle');
+});
+
+document.getElementById('btnMinimizarUrgencias').addEventListener('click', function(e) {
+  e.stopPropagation();
+  toggleMinimizar('panelUrgencias', 'btnMinimizarUrgencias');
+});
+
+// Hacer clic en el encabezado de un panel minimizado para expandirlo
+document.addEventListener('click', function(e) {
+  const target = e.target.closest('.panel-minimizado .header-lista, .panel-minimizado .header-detalle, .panel-minimizado .header-urgencias');
+  if (target) {
+    const panel = target.closest('.panel-minimizado');
+    if (panel) {
+      const botonId = panel.id === 'panelLista' ? 'btnMinimizarLista' :
+                      panel.id === 'panelDetalle' ? 'btnMinimizarDetalle' :
+                      'btnMinimizarUrgencias';
+      toggleMinimizar(panel.id, botonId);
+    }
+  }
+});
 // ============================================================
 // BLOQUE 3: ADMIN, GEOLOCALIZACIÓN, SELECCIÓN, MENÚ, GUARDADO, SEGURIDAD
 // ============================================================
