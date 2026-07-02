@@ -15,6 +15,12 @@
   <!-- Leaflet Routing Machine JS -->
   <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
   
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- DOMPurify (para sanitizar HTML) -->
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.0/dist/purify.min.js"></script>
+  
   <style>
     /* ===== RESET Y BASE ===== */
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -189,6 +195,22 @@
       width: 100%;
     }
     #btnSeguridad:active { transform: scale(0.95); }
+    #btnAuth {
+      background: #1a237e;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: bold;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      cursor: pointer;
+      margin-bottom: 8px;
+      text-align: center;
+      width: 100%;
+      display: block;
+    }
+    #btnAuth:active { transform: scale(0.95); }
 
     /* ===== FORMULARIO PRINCIPAL ===== */
     #formulario {
@@ -257,6 +279,30 @@
       margin-top: 6px;
       display: none;
     }
+
+    /* ===== FORMULARIO LOGIN ===== */
+    #panelLogin {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 30px 35px;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+      z-index: 11000;
+      width: 92%;
+      max-width: 400px;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+    #panelLogin h2 { color: #1a237e; margin-bottom: 16px; text-align: center; }
+    #panelLogin label { display: block; margin: 10px 0 4px 0; font-weight: 600; font-size: 14px; color: #333; }
+    #panelLogin input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; }
+    #panelLogin button { width: 100%; padding: 12px; margin-top: 12px; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
+    #btnLogin { background: #1a237e; color: white; }
+    #btnCerrarLogin { background: #666; color: white; margin-top: 6px; }
 
     /* ===== FORMULARIO CONDUCTOR ===== */
     #formularioConductor {
@@ -682,8 +728,8 @@
       #filtros .filtro-btn { font-size: 10px; padding: 2px 8px; }
     }
   </style>
-  </head>
-  <body>
+</head>
+<body>
   <div id="cargando">
     <div class="spinner"></div>
     <div>Cargando mapa...</div>
@@ -726,10 +772,23 @@
       <button data-tipo="ayuda_psicologica"><span class="color-bola" style="background:#8E24AA;width:14px;height:14px;"></span> 🧠 Ayuda psicológica</button>
       <button data-tipo="vacuna_tetanos"><span class="color-bola" style="background:#0D47A1;width:14px;height:14px;"></span> 💉 Vacuna antitetánica</button>
     </div>
+    <button id="btnAuth" style="display:block;">🔐 Iniciar sesión</button>
     <button id="btnAdmin" style="display:none;">🔐 Administrar (desbloquear)</button>
     <button id="btnChat" style="display:none;">💬 Chat administradores</button>
     <button id="btnSeguridad" style="display:none;">🔐 Seguridad</button>
     <button id="btnAgregar">➕ Agregar</button>
+  </div>
+
+  <!-- PANEL DE LOGIN -->
+  <div id="panelLogin">
+    <h2>🔐 Iniciar sesión</h2>
+    <p style="font-size:14px;color:#555;text-align:center;margin-bottom:12px;">Ingresa tus credenciales de administrador</p>
+    <label>Correo electrónico *</label>
+    <input type="email" id="loginEmail" placeholder="admin@example.com" required />
+    <label>Contraseña *</label>
+    <input type="password" id="loginPassword" placeholder="Ingresa tu contraseña" required />
+    <button id="btnLogin">✅ Iniciar sesión</button>
+    <button id="btnCerrarLogin">❌ Cancelar</button>
   </div>
 
   <!-- FORMULARIO PRINCIPAL -->
@@ -829,7 +888,6 @@
     <button id="btnCambiarPassword" style="margin-top:12px;background:#d32f2f;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">🔄 Cambiar contraseña</button>
     <button id="btnCerrarSeguridad" style="margin-top:6px;background:#666;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">❌ Cerrar</button>
   </div>
-
   <!-- PANEL DE LISTA -->
   <div id="panelLista">
     <div class="header-lista" id="headerLista">
