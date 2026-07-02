@@ -4,10 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>MapaVida - Refugios</title>
-  <!-- Leaflet CSS y JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- Supabase JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -34,8 +32,6 @@
       cursor: pointer;
       font-size: 15px;
     }
-    #header button:active { transform: scale(0.95); }
-    /* Formulario */
     #formulario {
       display: none;
       position: fixed;
@@ -82,10 +78,8 @@
     }
     #btnGuardar { background: #4CAF50; color: white; }
     #btnCancelar { background: #666; color: white; }
-    /* Popup */
     .leaflet-popup-content { font-size: 14px; }
     .cupo { font-weight: bold; color: #2e7d32; }
-    /* Botón flotante para cancelar selección */
     #cancelarSeleccion {
       display: none;
       position: fixed;
@@ -101,6 +95,14 @@
       border: none;
       cursor: pointer;
     }
+    .marker-temporal {
+      background: #E53935;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      border: 3px solid white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
   </style>
 </head>
 <body>
@@ -111,34 +113,35 @@
   </div>
   <div id="map"></div>
 
-  <!-- Formulario para agregar refugio -->
   <div id="formulario">
     <h3>📝 Nuevo Refugio</h3>
     <input type="text" id="fNombre" placeholder="Nombre del refugio *" required />
     <input type="text" id="fDireccion" placeholder="Dirección (opcional)" />
     <div class="coordenadas">
-      <span>📍 Lat:</span> <span id="fLatDisplay">0.0000</span>
-      <span>📍 Lng:</span> <span id="fLngDisplay">0.0000</span>
+      <span>📍 Lat:</span> <span id="fLatDisplay">---</span>
+      <span>📍 Lng:</span> <span id="fLngDisplay">---</span>
     </div>
     <input type="number" id="fCupo" placeholder="Cupo disponible (opcional)" />
     <button id="btnGuardar">✅ Guardar Refugio</button>
     <button id="btnCancelar" type="button">❌ Cancelar</button>
   </div>
 
-  <!-- Botón para cancelar selección en el mapa -->
   <button id="cancelarSeleccion">✖ Cancelar selección</button>
 
   <script>
     // ============================================================
-    // 1. CONFIGURACIÓN DE SUPABASE (REEMPLAZA TU CLAVE ANÓNIMA)
+    // 1. CONFIGURACIÓN
     // ============================================================
     const SUPABASE_URL = 'https://gtaadqluoljexglenbqo.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_n_h1fN6QWuEWbFxrCTKFvQ_rxw-o9-Y'; // <--- PON AQUÍ TU CLAVE
+    const SUPABASE_ANON_KEY = 'sb_publishable_n_h1fN6QWuEWbFxrCTKFvQ_rxw-o9-Y'; // <--- REEMPLAZA
 
+    // ============================================================
+    // 2. INICIALIZAR SUPABASE
+    // ============================================================
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // ============================================================
-    // 2. MAPA
+    // 3. MAPA
     // ============================================================
     const map = L.map('map').setView([10.4806, -66.9036], 12);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -148,12 +151,13 @@
 
     const markersLayer = L.layerGroup().addTo(map);
 
-    // Variables para selección de ubicación
-    let ubicacionSeleccionada = null; // { lat, lng }
-    let markerSeleccion = null; // marcador temporal en el mapa
+    // Variables para selección
+    let ubicacionSeleccionada = null;
+    let markerSeleccion = null;
+    let modoSeleccion = false;
 
     // ============================================================
-    // 3. CARGAR REFUGIOS DESDE SUPABASE
+    // 4. FUNCIONES DE REFUGIOS
     // ============================================================
     async function cargarRefugios() {
       try {
@@ -162,12 +166,11 @@
         localStorage.setItem('refugiosCache', JSON.stringify(data));
         mostrarRefugios(data);
       } catch (error) {
-        console.warn('Error en red, usando caché:', error);
         const cached = localStorage.getItem('refugiosCache');
         if (cached) {
           mostrarRefugios(JSON.parse(cached));
         } else {
-          alert('No hay datos disponibles. Conéctate a internet.');
+          alert('No hay datos. Conéctate a internet.');
         }
       }
     }
@@ -185,54 +188,20 @@
     }
 
     // ============================================================
-    // 4. MANEJO DEL FORMULARIO Y SELECCIÓN EN EL MAPA
+    // 5. SELECCIÓN EN EL MAPA
     // ============================================================
-    const formulario = document.getElementById('formulario');
-    const btnAgregar = document.getElementById('btnAgregar');
-    const btnCancelar = document.getElementById('btnCancelar');
-    const btnGuardar = document.getElementById('btnGuardar');
-    const btnCancelarSeleccion = document.getElementById('cancelarSeleccion');
-    const fLatDisplay = document.getElementById('fLatDisplay');
-    const fLngDisplay = document.getElementById('fLngDisplay');
+    function activarSeleccion() {
+      modoSeleccion = true;
+      map.getContainer().style.cursor = 'crosshair';
+      map.on('click', onMapClick);
+      document.getElementById('cancelarSeleccion').style.display = 'block';
+    }
 
-    // Mostrar formulario y activar selección en el mapa
-    btnAgregar.addEventListener('click', function(e) {
-      e.preventDefault();
-      if (formulario.style.display === 'block') {
-        formulario.style.display = 'none';
-        desactivarSeleccion();
-      } else {
-        formulario.style.display = 'block';
-        // Limpiar selección anterior
-        limpiarSeleccion();
-        // Activar modo selección en el mapa
-        activarSeleccion();
-        // Mostrar botón de cancelar selección
-        btnCancelarSeleccion.style.display = 'block';
-        // Actualizar coordenadas mostradas
-        fLatDisplay.textContent = '?';
-        fLngDisplay.textContent = '?';
-      }
-    });
-
-    // Cancelar formulario
-    btnCancelar.addEventListener('click', function() {
-      formulario.style.display = 'none';
-      desactivarSeleccion();
-      btnCancelarSeleccion.style.display = 'none';
-      limpiarFormulario();
-      limpiarSeleccion();
-    });
-
-    // Cancelar selección (desde el botón flotante)
-    btnCancelarSeleccion.addEventListener('click', function() {
-      limpiarSeleccion();
-      btnCancelarSeleccion.style.display = 'none';
-      fLatDisplay.textContent = '?';
-      fLngDisplay.textContent = '?';
-    });
-
-    function limpiarSeleccion() {
+    function desactivarSeleccion() {
+      modoSeleccion = false;
+      map.getContainer().style.cursor = '';
+      map.off('click', onMapClick);
+      document.getElementById('cancelarSeleccion').style.display = 'none';
       if (markerSeleccion) {
         map.removeLayer(markerSeleccion);
         markerSeleccion = null;
@@ -240,110 +209,122 @@
       ubicacionSeleccionada = null;
     }
 
-    function activarSeleccion() {
-      map.on('click', onMapClick);
-      // Cambiar cursor del mapa
-      map.getContainer().style.cursor = 'crosshair';
-    }
-
-    function desactivarSeleccion() {
-      map.off('click', onMapClick);
-      map.getContainer().style.cursor = '';
-      btnCancelarSeleccion.style.display = 'none';
-    }
-
     function onMapClick(e) {
       const lat = e.latlng.lat;
       const lng = e.latlng.lng;
-
-      // Guardar ubicación
       ubicacionSeleccionada = { lat, lng };
 
-      // Mostrar en el formulario
-      fLatDisplay.textContent = lat.toFixed(6);
-      fLngDisplay.textContent = lng.toFixed(6);
+      // Mostrar en formulario
+      document.getElementById('fLatDisplay').textContent = lat.toFixed(6);
+      document.getElementById('fLngDisplay').textContent = lng.toFixed(6);
 
-      // Colocar marcador temporal en el mapa
+      // Marcador temporal
       if (markerSeleccion) {
         map.removeLayer(markerSeleccion);
       }
       markerSeleccion = L.marker([lat, lng], {
         icon: L.divIcon({
           className: 'marker-temporal',
-          html: '📍',
-          iconSize: [30, 30]
+          html: '',
+          iconSize: [20, 20]
         })
       }).addTo(map);
 
-      // Ocultar botón de cancelar selección (ya se seleccionó)
-      btnCancelarSeleccion.style.display = 'none';
-
-      // Opcional: mover el mapa un poco para mostrar el marcador
-      // map.panTo([lat, lng]);
+      document.getElementById('cancelarSeleccion').style.display = 'none';
     }
+
+    // ============================================================
+    // 6. MANEJO DEL FORMULARIO
+    // ============================================================
+    const formulario = document.getElementById('formulario');
+    const btnAgregar = document.getElementById('btnAgregar');
+    const btnCancelar = document.getElementById('btnCancelar');
+    const btnGuardar = document.getElementById('btnGuardar');
+    const btnCancelarSeleccion = document.getElementById('cancelarSeleccion');
+
+    btnAgregar.addEventListener('click', function(e) {
+      e.preventDefault();
+      if (formulario.style.display === 'block') {
+        formulario.style.display = 'none';
+        desactivarSeleccion();
+      } else {
+        formulario.style.display = 'block';
+        activarSeleccion();
+        document.getElementById('fLatDisplay').textContent = '---';
+        document.getElementById('fLngDisplay').textContent = '---';
+      }
+    });
+
+    btnCancelar.addEventListener('click', function() {
+      formulario.style.display = 'none';
+      desactivarSeleccion();
+      limpiarFormulario();
+    });
+
+    btnCancelarSeleccion.addEventListener('click', function() {
+      desactivarSeleccion();
+      activarSeleccion(); // Reactivar para seleccionar otro punto
+      document.getElementById('fLatDisplay').textContent = '---';
+      document.getElementById('fLngDisplay').textContent = '---';
+    });
 
     function limpiarFormulario() {
       document.getElementById('fNombre').value = '';
       document.getElementById('fDireccion').value = '';
       document.getElementById('fCupo').value = '';
-      fLatDisplay.textContent = '0.0000';
-      fLngDisplay.textContent = '0.0000';
+      document.getElementById('fLatDisplay').textContent = '---';
+      document.getElementById('fLngDisplay').textContent = '---';
     }
 
     // ============================================================
-    // 5. GUARDAR REFUGIO
+    // 7. GUARDAR REFUGIO
     // ============================================================
     btnGuardar.addEventListener('click', async function() {
       const nombre = document.getElementById('fNombre').value.trim();
       const direccion = document.getElementById('fDireccion').value.trim();
       const cupo = parseInt(document.getElementById('fCupo').value) || 0;
 
-      // Validar nombre
       if (!nombre) {
         alert('❌ El nombre es obligatorio');
         return;
       }
 
-      // Validar que se haya seleccionado una ubicación en el mapa
       if (!ubicacionSeleccionada) {
-        alert('❌ Toca el mapa para seleccionar la ubicación del refugio');
+        alert('❌ Toca el mapa para seleccionar la ubicación');
         return;
       }
 
-      const lat = ubicacionSeleccionada.lat;
-      const lng = ubicacionSeleccionada.lng;
-
-      // Insertar en Supabase
       const { error } = await supabase
         .from('refugios')
-        .insert([{ nombre, direccion, lat, lng, cupo }]);
+        .insert([{
+          nombre,
+          direccion,
+          lat: ubicacionSeleccionada.lat,
+          lng: ubicacionSeleccionada.lng,
+          cupo
+        }]);
 
       if (error) {
-        alert('❌ Error al guardar: ' + error.message);
-        console.error('Error detallado:', error);
+        alert('❌ Error: ' + error.message);
       } else {
-        alert('✅ ¡Refugio agregado exitosamente!');
+        alert('✅ Refugio agregado');
         formulario.style.display = 'none';
         desactivarSeleccion();
-        btnCancelarSeleccion.style.display = 'none';
         limpiarFormulario();
-        limpiarSeleccion();
-        cargarRefugios(); // Recargar la lista
+        cargarRefugios();
       }
     });
 
     // ============================================================
-    // 6. INICIALIZAR
+    // 8. INICIO
     // ============================================================
     cargarRefugios();
 
-    // ============================================================
-    // 7. SERVICE WORKER (MODO OFFLINE)
-    // ============================================================
+    // Service Worker (opcional)
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js')
-        .then(() => console.log('✅ Service Worker registrado'))
-        .catch(err => console.warn('⚠️ Service Worker no disponible:', err));
+        .then(() => console.log('SW OK'))
+        .catch(() => console.warn('SW no disponible'));
     }
   </script>
 </body>
