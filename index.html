@@ -1,22 +1,133 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Prueba</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MapaVida - Refugios</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #1a1a1a; }
+    #map { height: 90vh; width: 100%; }
+    #header {
+      background: #E53935;
+      color: white;
+      padding: 12px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 10vh;
+    }
+    #header button {
+      background: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-weight: bold;
+      color: #E53935;
+      cursor: pointer;
+    }
+    .leaflet-popup-content { font-size: 14px; }
+    .cupo { font-weight: bold; color: #2e7d32; }
+  </style>
 </head>
 <body>
-  <h1>Prueba de JavaScript</h1>
-  <button id="btn">Clickeame</button>
+  <div id="header">
+    <span>🆘 MapaVida</span>
+    <button id="btnAgregar">+ Agregar Refugio</button>
+  </div>
+  <div id="map"></div>
 
   <script>
-    // ALERTA INMEDIATA
-    alert("🚀 Script cargado correctamente");
+    // 🔥 CONFIGURACIÓN DE SUPABASE (REEMPLAZA CON TUS LLAVES)
+    const SUPABASE_URL = 'https://gtaadqluoljexglenbqo.supabase.co'; // <--- PON AQUÍ TU URL
+    const SUPABASE_ANON_KEY = 'sb_publishable_n_h1fN6QWuEWbFxrCTKFvQ_rxw-o9-Y'; // <--- PON AQUÍ TU CLAVE
 
-    const btn = document.getElementById('btn');
-    btn.addEventListener('click', function() {
-      alert("✅ Botón clickeado");
-    });
+    // Inicializar Supabase
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Inicializar mapa
+    const map = L.map('map').setView([10.4806, -66.9036], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: 'MapaVida'
+    }).addTo(map);
+
+    let markersLayer = L.layerGroup().addTo(map);
+
+    // Función para cargar refugios
+    async function cargarRefugios() {
+      try {
+        const { data, error } = await supabase.from('refugios').select('*');
+        if (error) throw error;
+        localStorage.setItem('refugiosCache', JSON.stringify(data));
+        mostrarRefugios(data);
+      } catch (error) {
+        console.warn('Error en red, usando caché:', error);
+        const cached = localStorage.getItem('refugiosCache');
+        if (cached) {
+          mostrarRefugios(JSON.parse(cached));
+        } else {
+          alert('No hay datos disponibles. Conéctate a internet.');
+        }
+      }
+    }
+
+    function mostrarRefugios(refugios) {
+      markersLayer.clearLayers();
+      refugios.forEach(r => {
+        const popupContent = `
+          <b>${r.nombre}</b><br>
+          ${r.direccion || 'Sin dirección'}<br>
+          <span class="cupo">Cupo: ${r.cupo || 0} personas</span>
+        `;
+        L.marker([r.lat, r.lng]).bindPopup(popupContent).addTo(markersLayer);
+      });
+    }
+
+    // ASIGNAR EVENTO AL BOTÓN (CON DEPURACIÓN)
+    const btn = document.getElementById('btnAgregar');
+    if (btn) {
+      btn.addEventListener('click', function() {
+        const nombre = prompt('Nombre del refugio:');
+        if (!nombre) return;
+        const direccion = prompt('Dirección:');
+        const lat = parseFloat(prompt('Latitud (ej: 10.4910):'));
+        const lng = parseFloat(prompt('Longitud (ej: -66.8730):'));
+        if (isNaN(lat) || isNaN(lng)) return alert('Coordenadas inválidas');
+        const cupo = parseInt(prompt('Cupo disponible:')) || 0;
+
+        supabase
+          .from('refugios')
+          .insert([{ nombre, direccion, lat, lng, cupo }])
+          .then(({ error }) => {
+            if (error) {
+              alert('Error al guardar: ' + error.message);
+            } else {
+              alert('¡Refugio agregado exitosamente!');
+              cargarRefugios();
+            }
+          })
+          .catch(err => alert('Error de red: ' + err.message));
+      });
+    } else {
+      alert('ERROR: Botón no encontrado en el DOM');
+    }
+
+    // Cargar refugios al inicio
+    cargarRefugios();
+
+    // Service Worker para offline
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(() => console.log('SW OK'))
+        .catch(() => console.warn('SW no disponible'));
+    }
   </script>
 </body>
 </html>
