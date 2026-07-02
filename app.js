@@ -1,5 +1,5 @@
 // ============================================================
-// 1. MAPA Y CONTROLES (SIN SUPABASE)
+// 1. MAPA Y CONTROLES (SIN SUPABASE - CON LOCALSTORAGE)
 // ============================================================
 const map = L.map('map').setView([10.4806, -66.9036], 12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -17,11 +17,11 @@ let markerSeleccion = null;
 let tipoSeleccionado = null;
 let filtroActivo = 'todos';
 
-// Ocultar loader inmediatamente
+// Ocultar loader
 document.getElementById('cargando').style.display = 'none';
 
 // ============================================================
-// 2. DEFINICIÓN DE TIPOS (colores, iconos, campos, lógica)
+// 2. DEFINICIÓN DE TIPOS (con campos y lógica de popup)
 // ============================================================
 const TIPOS = {
   refugio: {
@@ -33,10 +33,10 @@ const TIPOS = {
       { id: 'necesita', label: '¿Qué necesitan? (separado por comas)', type: 'textarea', required: false }
     ],
     procesar: (d) => ({ cupo: parseInt(d.cupo)||0, necesita: d.necesita?d.necesita.split(',').map(s=>s.trim()).filter(Boolean):[] }),
-    popup: (info) => {
-      let h = `<div class="popup-info">👥 Cupo: ${info.cupo||'N/E'}</div>`;
-      if (info.necesita?.length) h += `<div class="popup-info">📦 Necesitan: ${info.necesita.join(', ')}</div>`;
-      return h;
+    popupDetalle: (info) => {
+      let html = `<div class="popup-info">👥 Cupo: ${info.cupo || 'N/E'}</div>`;
+      if (info.necesita?.length) html += `<div class="popup-info">📦 Necesitan: ${info.necesita.join(', ')}</div>`;
+      return html;
     }
   },
   centro_acopio: {
@@ -51,11 +51,11 @@ const TIPOS = {
       necesita: d.necesarios?d.necesarios.split(',').map(s=>s.trim()).filter(Boolean):[],
       suficientes: d.suficientes?d.suficientes.split(',').map(s=>s.trim()).filter(Boolean):[]
     }),
-    popup: (info) => {
-      let h = '';
-      if (info.necesita?.length) h += `<div class="popup-info">⚠️ Necesitan: ${info.necesita.join(', ')}</div>`;
-      if (info.suficientes?.length) h += `<div class="popup-info">✅ Ya tienen: ${info.suficientes.join(', ')}</div>`;
-      return h;
+    popupDetalle: (info) => {
+      let html = '';
+      if (info.necesita?.length) html += `<div class="popup-info">⚠️ Necesitan: ${info.necesita.join(', ')}</div>`;
+      if (info.suficientes?.length) html += `<div class="popup-info">✅ Ya tienen: ${info.suficientes.join(', ')}</div>`;
+      return html;
     }
   },
   hospital: {
@@ -67,11 +67,11 @@ const TIPOS = {
       { id: 'sangre', label: '¿Necesitan donaciones de sangre?', type: 'select', options: ['No', 'Sí'], required: false }
     ],
     procesar: (d) => ({ medicamentos: d.medicamentos?d.medicamentos.split(',').map(s=>s.trim()).filter(Boolean):[], necesita_sangre: d.sangre==='Sí' }),
-    popup: (info) => {
-      let h = '';
-      if (info.medicamentos?.length) h += `<div class="popup-info">💊 Medicamentos: ${info.medicamentos.join(', ')}</div>`;
-      if (info.necesita_sangre) h += `<div class="popup-info" style="color:#d32f2f;">🩸 ¡Urgen donaciones de sangre!</div>`;
-      return h;
+    popupDetalle: (info) => {
+      let html = '';
+      if (info.medicamentos?.length) html += `<div class="popup-info">💊 Medicamentos: ${info.medicamentos.join(', ')}</div>`;
+      if (info.necesita_sangre) html += `<div class="popup-info" style="color:#d32f2f;">🩸 ¡Urgen donaciones de sangre!</div>`;
+      return html;
     }
   },
   edificio_caido: {
@@ -80,12 +80,18 @@ const TIPOS = {
       { id: 'nombre', label: 'Ubicación / referencia *', type: 'text', required: true },
       { id: 'apoyo', label: '¿Qué apoyo necesitan? (ej: agua, comida, escombros)', type: 'textarea', required: false }
     ],
-    procesar: (d) => ({ apoyo: d.apoyo?d.apoyo.split(',').map(s=>s.trim()).filter(Boolean):[] }),
-    popup: (info) => {
-      let h = `<div class="popup-info" style="color:#C62828;">⚠️ Edificio colapsado</div>`;
-      if (info.apoyo?.length) h += `<div class="popup-info">🛠️ Necesitan: ${info.apoyo.join(', ')}</div>`;
-      return h;
-    }
+    procesar: (d) => ({ apoyo: d.apoyo?d.apoyo.split(',').map(s=>s.trim()).filter(Boolean):[], recogido: false }),
+    popupDetalle: (info) => {
+      let html = `<div class="popup-info" style="color:#C62828;">⚠️ Edificio colapsado</div>`;
+      if (info.apoyo?.length) html += `<div class="popup-info">🛠️ Necesitan: ${info.apoyo.join(', ')}</div>`;
+      if (info.recogido) {
+        html += `<div class="popup-info" style="color:#2e7d32;">✅ Ya recogido y limpiado</div>`;
+      }
+      return html;
+    },
+    // Icono especial si está recogido
+    getIcon: (recogido) => recogido ? '✅' : '💥',
+    getColor: (recogido) => recogido ? '#757575' : '#C62828'
   },
   peligro_derrumbe: {
     label: 'Peligro de derrumbe', color: '#E65100', icono: '⚠️',
@@ -94,7 +100,7 @@ const TIPOS = {
       { id: 'advertencia', label: 'Advertencia adicional (opcional)', type: 'textarea', required: false }
     ],
     procesar: (d) => ({ advertencia: d.advertencia || 'Manténgase alejado, estructura inestable' }),
-    popup: (info) => `<div class="popup-advertencia">⚠️ ${info.advertencia}</div>`
+    popupDetalle: (info) => `<div class="popup-advertencia">⚠️ ${info.advertencia}</div>`
   },
   sin_inspeccionar: {
     label: 'Sin inspeccionar', color: '#6A1B9A', icono: '❓',
@@ -103,7 +109,7 @@ const TIPOS = {
       { id: 'nota', label: 'Nota adicional (opcional)', type: 'textarea', required: false }
     ],
     procesar: (d) => ({ mensaje: d.nota || 'Estructura no ha sido inspeccionada por personal autorizado' }),
-    popup: (info) => `<div class="popup-info" style="color:#6A1B9A;">❓ ${info.mensaje}</div>`
+    popupDetalle: (info) => `<div class="popup-info" style="color:#6A1B9A;">❓ ${info.mensaje}</div>`
   },
   veterinaria: {
     label: 'Atención veterinaria', color: '#00897B', icono: '🐾',
@@ -117,17 +123,17 @@ const TIPOS = {
       servicios: d.servicios?d.servicios.split(',').map(s=>s.trim()).filter(Boolean):[],
       emergencia_24h: d.emergencia === 'Sí'
     }),
-    popup: (info) => {
-      let h = '';
-      if (info.servicios?.length) h += `<div class="popup-info">🩺 Servicios: ${info.servicios.join(', ')}</div>`;
-      if (info.emergencia_24h) h += `<div class="popup-info" style="color:#00897B;">🕐 Atención 24h</div>`;
-      return h;
+    popupDetalle: (info) => {
+      let html = '';
+      if (info.servicios?.length) html += `<div class="popup-info">🩺 Servicios: ${info.servicios.join(', ')}</div>`;
+      if (info.emergencia_24h) html += `<div class="popup-info" style="color:#00897B;">🕐 Atención 24h</div>`;
+      return html;
     }
   }
 };
 
 // ============================================================
-// 3. FUNCIONES DE CARGA Y VISUALIZACIÓN (con localStorage)
+// 3. FUNCIONES DE CARGA Y VISUALIZACIÓN
 // ============================================================
 function cargarPuntos() {
   const stored = localStorage.getItem('puntosMapaVida');
@@ -138,7 +144,7 @@ function cargarPuntos() {
       todosLosPuntos = [];
     }
   } else {
-    // Datos de ejemplo para probar
+    // Datos de ejemplo
     todosLosPuntos = [
       {
         id: '1',
@@ -150,11 +156,11 @@ function cargarPuntos() {
       },
       {
         id: '2',
-        tipo: 'hospital',
-        nombre: 'Hospital Clínico',
+        tipo: 'edificio_caido',
+        nombre: 'Edificio Las Mercedes',
         lat: 10.5000,
         lng: -66.9000,
-        informacion: { direccion: 'Calle 2', medicamentos: ['analgésicos'], necesita_sangre: true }
+        informacion: { direccion: 'Calle 2', apoyo: ['grúa', 'mano de obra'], recogido: false }
       }
     ];
     localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
@@ -171,7 +177,6 @@ function aplicarFiltros() {
     ? todosLosPuntos
     : todosLosPuntos.filter(p => p.tipo === filtroActivo);
   mostrarPuntos(filtrados);
-  // Recomendación de los 5 más cercanos (si hay ubicación)
   if (ubicacionUsuario && filtrados.length > 0) {
     const conDistancia = filtrados.map(p => ({
       ...p,
@@ -188,29 +193,90 @@ function mostrarPuntos(puntos) {
   puntos.forEach(p => {
     const tipo = TIPOS[p.tipo];
     if (!tipo) return;
-    const icono = L.divIcon({
-      html: `<div style="background:${tipo.color};color:white;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);">${tipo.icono}</div>`,
+
+    // Determinar si el edificio caído está recogido
+    let recogido = false;
+    let color = tipo.color;
+    let icono = tipo.icono;
+    if (p.tipo === 'edificio_caido' && p.informacion?.recogido) {
+      recogido = true;
+      color = '#757575';
+      icono = '✅';
+    }
+
+    const icon = L.divIcon({
+      html: `<div style="background:${color};color:white;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);">${icono}</div>`,
       iconSize: [34, 34],
       className: ''
     });
+
+    // Contenido del popup detallado
     let popupContent = `
       <div class="popup-tipo">${tipo.icono} ${tipo.label}</div>
       <strong>${p.nombre}</strong><br>
       ${p.informacion?.direccion ? p.informacion.direccion + '<br>' : ''}
-      ${tipo.popup(p.informacion || {})}
+      ${tipo.popupDetalle(p.informacion || {})}
     `;
+
+    // Si es edificio caído y NO está recogido, añadir botón para marcar como recogido
+    if (p.tipo === 'edificio_caido' && !recogido) {
+      popupContent += `
+        <button class="btn-recoger" data-id="${p.id}" style="margin-top:8px;background:#4CAF50;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
+          ✅ Marcar como recogido
+        </button>
+      `;
+    } else if (p.tipo === 'edificio_caido' && recogido) {
+      popupContent += `
+        <div style="margin-top:8px;background:#e0e0e0;padding:6px;border-radius:6px;text-align:center;color:#333;">
+          ✅ Ya recogido y limpiado
+        </div>
+      `;
+    }
+
+    // Añadir distancia si hay ubicación del usuario
     if (ubicacionUsuario) {
       const dist = calcularDistancia(ubicacionUsuario.lat, ubicacionUsuario.lng, p.lat, p.lng);
       popupContent += `<div class="popup-distancia">📍 ${dist.toFixed(2)} km de ti</div>`;
     }
-    L.marker([p.lat, p.lng], { icon: icono })
-      .bindPopup(popupContent)
-      .addTo(markersLayer);
+
+    const marker = L.marker([p.lat, p.lng], { icon })
+      .bindPopup(popupContent, { maxWidth: 300, className: 'popup-detalle' });
+
+    // Manejar el botón de recogido mediante delegación de eventos en el popup
+    marker.on('popupopen', function() {
+      const btn = document.querySelector(`.btn-recoger[data-id="${p.id}"]`);
+      if (btn) {
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          marcarRecogido(p.id);
+        });
+      }
+    });
+
+    markersLayer.addLayer(marker);
   });
 }
 
 // ============================================================
-// 4. GEOLOCALIZACIÓN (GPS)
+// 4. FUNCIÓN PARA MARCAR COMO RECOGIDO
+// ============================================================
+function marcarRecogido(id) {
+  const punto = todosLosPuntos.find(p => p.id === id);
+  if (!punto) return;
+  if (punto.tipo !== 'edificio_caido') return;
+  if (punto.informacion.recogido) return;
+
+  // Actualizar estado
+  punto.informacion.recogido = true;
+  guardarPuntos();
+
+  // Refrescar el mapa para actualizar el marcador y popup
+  aplicarFiltros();
+  alert('✅ Edificio marcado como recogido y limpiado. ¡Gracias por tu ayuda!');
+}
+
+// ============================================================
+// 5. GEOLOCALIZACIÓN (GPS)
 // ============================================================
 function obtenerUbicacion() {
   if (navigator.geolocation) {
@@ -234,7 +300,7 @@ function obtenerUbicacion() {
 }
 
 // ============================================================
-// 5. SELECCIÓN EN EL MAPA (primero tocar, luego formulario)
+// 6. SELECCIÓN EN EL MAPA (para agregar puntos)
 // ============================================================
 function activarSeleccion() {
   map.getContainer().style.cursor = 'crosshair';
@@ -261,14 +327,13 @@ function onMapClick(e) {
       iconSize: [20, 20]
     })
   }).addTo(map);
-  // Desactivar selección y mostrar formulario
   map.off('click', onMapClick);
   map.getContainer().style.cursor = '';
   mostrarFormulario(tipoSeleccionado);
 }
 
 // ============================================================
-// 6. MENÚ Y FORMULARIO
+// 7. MENÚ Y FORMULARIO
 // ============================================================
 const menuOpciones = document.getElementById('menuOpciones');
 const btnAgregar = document.getElementById('btnAgregar');
@@ -280,14 +345,12 @@ const fLngDisplay = document.getElementById('fLngDisplay');
 const btnGuardar = document.getElementById('btnGuardar');
 const btnCancelar = document.getElementById('btnCancelar');
 
-// Mostrar/ocultar menú
 btnAgregar.addEventListener('click', function(e) {
   e.stopPropagation();
   menuOpciones.style.display = (menuOpciones.style.display === 'flex') ? 'none' : 'flex';
 });
 document.addEventListener('click', function() { menuOpciones.style.display = 'none'; });
 
-// Seleccionar tipo del menú
 document.querySelectorAll('#menuOpciones button').forEach(btn => {
   btn.addEventListener('click', function(e) {
     e.stopPropagation();
@@ -300,9 +363,6 @@ document.querySelectorAll('#menuOpciones button').forEach(btn => {
   });
 });
 
-// ============================================================
-// 7. MOSTRAR FORMULARIO CON CAMPOS DINÁMICOS
-// ============================================================
 function mostrarFormulario(tipo) {
   const config = TIPOS[tipo];
   if (!config) return;
@@ -326,7 +386,7 @@ function mostrarFormulario(tipo) {
 }
 
 // ============================================================
-// 8. GUARDAR (EN LOCALSTORAGE)
+// 8. GUARDAR (LOCALSTORAGE)
 // ============================================================
 btnGuardar.addEventListener('click', function() {
   if (!tipoSeleccionado) { alert('Selecciona un tipo primero'); return; }
@@ -347,7 +407,6 @@ btnGuardar.addEventListener('click', function() {
   const informacion = config.procesar(datos);
   informacion.direccion = datos.direccion || '';
 
-  // Crear nuevo punto
   const nuevoPunto = {
     id: Date.now().toString(),
     tipo: tipoSeleccionado,
@@ -367,9 +426,6 @@ btnGuardar.addEventListener('click', function() {
   aplicarFiltros();
 });
 
-// ============================================================
-// 9. CANCELAR
-// ============================================================
 btnCancelar.addEventListener('click', function() {
   formulario.style.display = 'none';
   desactivarSeleccion();
@@ -377,7 +433,7 @@ btnCancelar.addEventListener('click', function() {
 });
 
 // ============================================================
-// 10. BUSCADOR (Nominatim)
+// 9. BUSCADOR (Nominatim)
 // ============================================================
 document.getElementById('btnBuscar').addEventListener('click', async function() {
   const query = document.getElementById('buscador').value.trim();
@@ -400,7 +456,7 @@ document.getElementById('buscador').addEventListener('keypress', function(e) {
 });
 
 // ============================================================
-// 11. FILTROS
+// 10. FILTROS
 // ============================================================
 document.querySelectorAll('#filtros .filtro-btn').forEach(btn => {
   btn.addEventListener('click', function() {
@@ -412,7 +468,7 @@ document.querySelectorAll('#filtros .filtro-btn').forEach(btn => {
 });
 
 // ============================================================
-// 12. UTILIDADES
+// 11. UTILIDADES
 // ============================================================
 function calcularDistancia(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -423,9 +479,9 @@ function calcularDistancia(lat1, lon1, lat2, lon2) {
 }
 
 // ============================================================
-// 13. INICIO
+// 12. INICIO
 // ============================================================
 cargarPuntos();
 obtenerUbicacion();
 
-console.log('✅ App sin Supabase - Datos guardados en localStorage');
+console.log('✅ App con presión larga y estado "recogido" - Datos en localStorage');
