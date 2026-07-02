@@ -1,12 +1,5 @@
 // ============================================================
-// 1. CONFIGURACIÓN SUPABASE (¡REEMPLAZA TU CLAVE!)
-// ============================================================
-const SUPABASE_URL = 'https://gtaadqluoljexglenbqo.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_n_h1fN6QWuEWbFxrCTKFvQ_rxw-o9-Y'; // <-- PON AQUÍ TU CLAVE REAL
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-// ============================================================
-// 2. MAPA Y CONTROLES
+// 1. MAPA Y CONTROLES (SIN SUPABASE)
 // ============================================================
 const map = L.map('map').setView([10.4806, -66.9036], 12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -24,11 +17,11 @@ let markerSeleccion = null;
 let tipoSeleccionado = null;
 let filtroActivo = 'todos';
 
-// Ocultar loader
+// Ocultar loader inmediatamente
 document.getElementById('cargando').style.display = 'none';
 
 // ============================================================
-// 3. DEFINICIÓN DE TIPOS (colores, iconos, campos, lógica)
+// 2. DEFINICIÓN DE TIPOS (colores, iconos, campos, lógica)
 // ============================================================
 const TIPOS = {
   refugio: {
@@ -134,20 +127,43 @@ const TIPOS = {
 };
 
 // ============================================================
-// 4. FUNCIONES DE CARGA Y VISUALIZACIÓN
+// 3. FUNCIONES DE CARGA Y VISUALIZACIÓN (con localStorage)
 // ============================================================
-async function cargarPuntos() {
-  try {
-    const { data, error } = await supabase.from('puntos').select('*');
-    if (error) throw error;
-    todosLosPuntos = data || [];
-    localStorage.setItem('puntosCache', JSON.stringify(todosLosPuntos));
-    aplicarFiltros();
-  } catch (error) {
-    const cached = localStorage.getItem('puntosCache');
-    if (cached) { todosLosPuntos = JSON.parse(cached); aplicarFiltros(); }
-    else alert('No hay datos. Conéctate a internet.');
+function cargarPuntos() {
+  const stored = localStorage.getItem('puntosMapaVida');
+  if (stored) {
+    try {
+      todosLosPuntos = JSON.parse(stored);
+    } catch (e) {
+      todosLosPuntos = [];
+    }
+  } else {
+    // Datos de ejemplo para probar
+    todosLosPuntos = [
+      {
+        id: '1',
+        tipo: 'refugio',
+        nombre: 'Refugio Los Rosales',
+        lat: 10.4910,
+        lng: -66.8730,
+        informacion: { direccion: 'Av. Principal', cupo: 150, necesita: ['agua', 'comida'] }
+      },
+      {
+        id: '2',
+        tipo: 'hospital',
+        nombre: 'Hospital Clínico',
+        lat: 10.5000,
+        lng: -66.9000,
+        informacion: { direccion: 'Calle 2', medicamentos: ['analgésicos'], necesita_sangre: true }
+      }
+    ];
+    localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
   }
+  aplicarFiltros();
+}
+
+function guardarPuntos() {
+  localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
 }
 
 function aplicarFiltros() {
@@ -164,7 +180,6 @@ function aplicarFiltros() {
     conDistancia.sort((a,b) => a.distancia - b.distancia);
     const cercanos = conDistancia.slice(0, 5);
     console.log('📍 Más cercanos:', cercanos.map(p => `${p.nombre} (${p.distancia.toFixed(2)} km)`));
-    // Podrías mostrar esto en un panel flotante si lo deseas
   }
 }
 
@@ -195,7 +210,7 @@ function mostrarPuntos(puntos) {
 }
 
 // ============================================================
-// 5. GEOLOCALIZACIÓN (GPS)
+// 4. GEOLOCALIZACIÓN (GPS)
 // ============================================================
 function obtenerUbicacion() {
   if (navigator.geolocation) {
@@ -219,7 +234,7 @@ function obtenerUbicacion() {
 }
 
 // ============================================================
-// 6. SELECCIÓN EN EL MAPA (primero tocar, luego formulario)
+// 5. SELECCIÓN EN EL MAPA (primero tocar, luego formulario)
 // ============================================================
 function activarSeleccion() {
   map.getContainer().style.cursor = 'crosshair';
@@ -253,7 +268,7 @@ function onMapClick(e) {
 }
 
 // ============================================================
-// 7. MENÚ Y FORMULARIO
+// 6. MENÚ Y FORMULARIO
 // ============================================================
 const menuOpciones = document.getElementById('menuOpciones');
 const btnAgregar = document.getElementById('btnAgregar');
@@ -286,7 +301,7 @@ document.querySelectorAll('#menuOpciones button').forEach(btn => {
 });
 
 // ============================================================
-// 8. MOSTRAR FORMULARIO CON CAMPOS DINÁMICOS
+// 7. MOSTRAR FORMULARIO CON CAMPOS DINÁMICOS
 // ============================================================
 function mostrarFormulario(tipo) {
   const config = TIPOS[tipo];
@@ -311,9 +326,9 @@ function mostrarFormulario(tipo) {
 }
 
 // ============================================================
-// 9. GUARDAR
+// 8. GUARDAR (EN LOCALSTORAGE)
 // ============================================================
-btnGuardar.addEventListener('click', async function() {
+btnGuardar.addEventListener('click', function() {
   if (!tipoSeleccionado) { alert('Selecciona un tipo primero'); return; }
   if (!ubicacionSeleccionada) { alert('Toca el mapa para seleccionar ubicación'); return; }
 
@@ -332,29 +347,28 @@ btnGuardar.addEventListener('click', async function() {
   const informacion = config.procesar(datos);
   informacion.direccion = datos.direccion || '';
 
-  const { error } = await supabase
-    .from('puntos')
-    .insert([{
-      tipo: tipoSeleccionado,
-      nombre: datos.nombre,
-      lat: ubicacionSeleccionada.lat,
-      lng: ubicacionSeleccionada.lng,
-      informacion: informacion
-    }]);
+  // Crear nuevo punto
+  const nuevoPunto = {
+    id: Date.now().toString(),
+    tipo: tipoSeleccionado,
+    nombre: datos.nombre,
+    lat: ubicacionSeleccionada.lat,
+    lng: ubicacionSeleccionada.lng,
+    informacion: informacion
+  };
 
-  if (error) {
-    alert('❌ Error: ' + error.message);
-  } else {
-    alert('✅ Punto guardado');
-    formulario.style.display = 'none';
-    desactivarSeleccion();
-    ubicacionSeleccionada = null;
-    cargarPuntos();
-  }
+  todosLosPuntos.push(nuevoPunto);
+  guardarPuntos();
+
+  alert('✅ Punto guardado localmente');
+  formulario.style.display = 'none';
+  desactivarSeleccion();
+  ubicacionSeleccionada = null;
+  aplicarFiltros();
 });
 
 // ============================================================
-// 10. CANCELAR
+// 9. CANCELAR
 // ============================================================
 btnCancelar.addEventListener('click', function() {
   formulario.style.display = 'none';
@@ -363,7 +377,7 @@ btnCancelar.addEventListener('click', function() {
 });
 
 // ============================================================
-// 11. BUSCADOR (Nominatim)
+// 10. BUSCADOR (Nominatim)
 // ============================================================
 document.getElementById('btnBuscar').addEventListener('click', async function() {
   const query = document.getElementById('buscador').value.trim();
@@ -386,7 +400,7 @@ document.getElementById('buscador').addEventListener('keypress', function(e) {
 });
 
 // ============================================================
-// 12. FILTROS
+// 11. FILTROS
 // ============================================================
 document.querySelectorAll('#filtros .filtro-btn').forEach(btn => {
   btn.addEventListener('click', function() {
@@ -398,7 +412,7 @@ document.querySelectorAll('#filtros .filtro-btn').forEach(btn => {
 });
 
 // ============================================================
-// 13. UTILIDADES
+// 12. UTILIDADES
 // ============================================================
 function calcularDistancia(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -409,7 +423,9 @@ function calcularDistancia(lat1, lon1, lat2, lon2) {
 }
 
 // ============================================================
-// 14. INICIO
+// 13. INICIO
 // ============================================================
 cargarPuntos();
 obtenerUbicacion();
+
+console.log('✅ App sin Supabase - Datos guardados en localStorage');
