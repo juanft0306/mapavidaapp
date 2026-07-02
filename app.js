@@ -1,6 +1,12 @@
 // ============================================================
-// 1. MAPA Y CONTROLES
+// MAPAVIDA - APP COMPLETA
+// PARTE 1: CONFIGURACIÓN, TIPOS, CARGA Y VISUALIZACIÓN
 // ============================================================
+
+// --- 1. CONFIGURACIÓN ---
+const ADMIN_PASSWORD = 'MapaVida2026';
+
+// --- 2. MAPA Y CONTROLES ---
 const map = L.map('map').setView([10.4806, -66.9036], 12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
@@ -15,55 +21,82 @@ let ubicacionSeleccionada = null;
 let markerSeleccion = null;
 let tipoSeleccionado = null;
 let filtroActivo = 'todos';
-let modoAdmin = false; // Solo el desarrollador puede activar
-let puntoEnEdicion = null; // Para eliminar
-
-// Contraseña del administrador (cámbiala por la que quieras)
-const ADMIN_PASSWORD = 'MapaVida2026';
+let modoAdmin = false;
+let puntoEnEdicion = null;
+let controlRuta = null;
+let modoNavegacion = false;
 
 document.getElementById('cargando').style.display = 'none';
 
-// ============================================================
-// 2. DEFINICIÓN DE TIPOS (con campos específicos)
-// ============================================================
+// --- 3. DEFINICIONES DE TIPOS (con definiciones claras) ---
+const DEFINICIONES = {
+  edificio_caido: 'Estructura que ya colapsó total o parcialmente. No ingresar. Necesita maquinaria y personal especializado para remover escombros.',
+  peligro_derrumbe: 'Estructura con daños estructurales visibles (grietas, inclinación, etc.) que podría colapsar en cualquier momento. Manténgase alejado.',
+  sin_inspeccionar: 'Estructura que aún no ha sido revisada por personal técnico. No se sabe si es segura o no. Evitar el ingreso hasta evaluación oficial.',
+  refugio: 'Espacio habilitado para albergar personas damnificadas. Puede tener cupo limitado y necesidades específicas.',
+  centro_acopio: 'Lugar donde se recolectan y distribuyen insumos (comida, agua, medicinas, ropa, etc.) para los afectados.',
+  hospital: 'Centro de atención médica. Puede necesitar medicamentos, sangre o personal voluntario.',
+  veterinaria: 'Centro de atención para animales heridos o abandonados. Puede necesitar insumos o voluntarios.',
+  ayuda_psicologica: 'Punto de apoyo emocional y contención psicológica para afectados y rescatistas.',
+  vacuna_tetanos: 'Punto de vacunación contra el tétano (enfermedad grave por heridas con objetos contaminados).'
+};
+
 const TIPOS = {
   refugio: {
     label: 'Refugio', color: '#2E7D32', icono: '🏠', requiereAdmin: false,
+    definicion: DEFINICIONES.refugio,
     campos: [
       { id: 'nombre', label: 'Nombre del refugio *', type: 'text', required: true },
       { id: 'direccion', label: 'Dirección', type: 'text', required: false },
       { id: 'cupo', label: 'Cupo disponible (personas)', type: 'number', required: false },
+      { id: 'necesidad_infantil', label: '¿Necesitan actividades recreativas o cuidado para niños?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'necesidades', label: 'Necesidades detalladas (una por línea)', type: 'textarea', required: false }
     ],
     procesar: (d) => ({
       cupo: parseInt(d.cupo) || 0,
-      necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []
+      necesidad_infantil: d.necesidad_infantil === 'Sí',
+      necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : [],
+      voluntarios_infantiles: []
     }),
-    popupDetalle: (info) => `<div class="popup-info">👥 Cupo: ${info.cupo || 'N/E'}</div>`
+    popupDetalle: (info) => {
+      let html = `<div class="popup-info">👥 Cupo: ${info.cupo || 'N/E'}</div>`;
+      if (info.necesidad_infantil) {
+        html += `<div class="popup-info" style="color:#FF6F00;">🧸 Necesitan recreación/cuidado para niños</div>`;
+      }
+      return html;
+    }
   },
   centro_acopio: {
     label: 'Centro de acopio', color: '#F57C00', icono: '📦', requiereAdmin: false,
+    definicion: DEFINICIONES.centro_acopio,
     campos: [
       { id: 'nombre', label: 'Nombre del centro *', type: 'text', required: true },
       { id: 'direccion', label: 'Dirección', type: 'text', required: false },
       { id: 'necesarios', label: 'Insumos necesarios (separados por comas)', type: 'textarea', required: false },
       { id: 'suficientes', label: 'Insumos que YA NO necesitan (separados por comas)', type: 'textarea', required: false },
+      { id: 'necesidad_infantil', label: '¿Necesitan actividades recreativas o cuidado para niños?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'necesidades', label: 'Necesidades detalladas (una por línea)', type: 'textarea', required: false }
     ],
     procesar: (d) => ({
       necesita: d.necesarios ? d.necesarios.split(',').map(s => s.trim()).filter(Boolean) : [],
       suficientes: d.suficientes ? d.suficientes.split(',').map(s => s.trim()).filter(Boolean) : [],
-      necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []
+      necesidad_infantil: d.necesidad_infantil === 'Sí',
+      necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : [],
+      voluntarios_infantiles: []
     }),
     popupDetalle: (info) => {
       let html = '';
       if (info.necesita?.length) html += `<div class="popup-info">⚠️ Necesitan: ${info.necesita.join(', ')}</div>`;
       if (info.suficientes?.length) html += `<div class="popup-info" style="color:#2e7d32;">✅ Ya no necesitan: ${info.suficientes.join(', ')}</div>`;
+      if (info.necesidad_infantil) {
+        html += `<div class="popup-info" style="color:#FF6F00;">🧸 Necesitan recreación/cuidado para niños</div>`;
+      }
       return html;
     }
   },
   hospital: {
     label: 'Hospital', color: '#1976D2', icono: '🏥', requiereAdmin: false,
+    definicion: DEFINICIONES.hospital,
     campos: [
       { id: 'nombre', label: 'Nombre del hospital *', type: 'text', required: true },
       { id: 'direccion', label: 'Dirección', type: 'text', required: false },
@@ -85,6 +118,7 @@ const TIPOS = {
   },
   edificio_caido: {
     label: 'Edificio caído', color: '#C62828', icono: '💥', requiereAdmin: false,
+    definicion: DEFINICIONES.edificio_caido,
     campos: [
       { id: 'nombre', label: 'Ubicación / referencia *', type: 'text', required: true },
       { id: 'apoyo', label: '¿Qué apoyo necesitan? (ej: agua, comida, escombros)', type: 'textarea', required: false },
@@ -104,6 +138,7 @@ const TIPOS = {
   },
   peligro_derrumbe: {
     label: 'Peligro de derrumbe', color: '#E65100', icono: '⚠️', requiereAdmin: false,
+    definicion: DEFINICIONES.peligro_derrumbe,
     campos: [
       { id: 'nombre', label: 'Ubicación / referencia *', type: 'text', required: true },
       { id: 'advertencia', label: 'Advertencia adicional (opcional)', type: 'textarea', required: false },
@@ -117,6 +152,7 @@ const TIPOS = {
   },
   sin_inspeccionar: {
     label: 'Sin inspeccionar', color: '#6A1B9A', icono: '❓', requiereAdmin: false,
+    definicion: DEFINICIONES.sin_inspeccionar,
     campos: [
       { id: 'nombre', label: 'Ubicación / referencia *', type: 'text', required: true },
       { id: 'nota', label: 'Nota adicional (opcional)', type: 'textarea', required: false },
@@ -130,6 +166,7 @@ const TIPOS = {
   },
   veterinaria: {
     label: 'Atención veterinaria', color: '#00897B', icono: '🐾', requiereAdmin: false,
+    definicion: DEFINICIONES.veterinaria,
     campos: [
       { id: 'nombre', label: 'Nombre del centro veterinario *', type: 'text', required: true },
       { id: 'direccion', label: 'Dirección', type: 'text', required: false },
@@ -149,9 +186,9 @@ const TIPOS = {
       return html;
     }
   },
-  // NUEVOS TIPOS (solo administrador)
   ayuda_psicologica: {
     label: 'Ayuda psicológica', color: '#8E24AA', icono: '🧠', requiereAdmin: true,
+    definicion: DEFINICIONES.ayuda_psicologica,
     campos: [
       { id: 'nombre', label: 'Nombre del centro / profesional *', type: 'text', required: true },
       { id: 'direccion', label: 'Dirección', type: 'text', required: false },
@@ -173,6 +210,7 @@ const TIPOS = {
   },
   vacuna_tetanos: {
     label: 'Vacunación antitetánica', color: '#0D47A1', icono: '💉', requiereAdmin: true,
+    definicion: DEFINICIONES.vacuna_tetanos,
     campos: [
       { id: 'nombre', label: 'Nombre del punto de vacunación *', type: 'text', required: true },
       { id: 'direccion', label: 'Dirección', type: 'text', required: false },
@@ -191,46 +229,10 @@ const TIPOS = {
       if (info.contacto) html += `<div class="popup-info">📞 Contacto: ${info.contacto}</div>`;
       return html;
     }
-  },
-  proteccion_infantil: {
-    label: 'Protección infantil', color: '#FF6F00', icono: '👶', requiereAdmin: true,
-    campos: [
-      { id: 'nombre', label: 'Nombre completo (2 nombres y 2 apellidos) *', type: 'text', required: true },
-      { id: 'cedula', label: 'Número de cédula *', type: 'text', required: true },
-      { id: 'foto_cedula', label: 'Enlace a foto de la cédula (URL) *', type: 'text', required: true },
-      { id: 'foto_personal', label: 'Enlace a foto actualizada (URL) *', type: 'text', required: true },
-      { id: 'direccion', label: 'Dirección de contacto', type: 'text', required: false },
-      { id: 'telefono', label: 'Teléfono de contacto', type: 'text', required: false },
-      { id: 'rol', label: 'Rol (recreador, cuidador, voluntario, etc.)', type: 'text', required: false },
-      { id: 'mensaje', label: 'Mensaje de seguridad para los niños (opcional)', type: 'textarea', required: false }
-    ],
-    procesar: (d) => ({
-      cedula: d.cedula || '',
-      foto_cedula: d.foto_cedula || '',
-      foto_personal: d.foto_personal || '',
-      telefono: d.telefono || '',
-      rol: d.rol || 'Voluntario',
-      mensaje: d.mensaje || 'Estamos aquí para cuidarte y protegerte. Tu bienestar es lo más importante.'
-    }),
-    popupDetalle: (info) => {
-      let html = `
-        <div class="popup-info">🆔 Cédula: ${info.cedula || 'N/E'}</div>
-        <div class="popup-info">📸 <a href="${info.foto_cedula}" target="_blank">Ver foto de cédula</a></div>
-        <div class="popup-info">📸 <a href="${info.foto_personal}" target="_blank">Ver foto actual</a></div>
-        ${info.telefono ? `<div class="popup-info">📞 Teléfono: ${info.telefono}</div>` : ''}
-        ${info.rol ? `<div class="popup-info">👤 Rol: ${info.rol}</div>` : ''}
-        <div class="popup-mensaje-bonito">
-          <p>💛 ${info.mensaje || 'Estamos aquí para cuidarte y protegerte. Tu bienestar es lo más importante.'}</p>
-        </div>
-      `;
-      return html;
-    }
   }
 };
 
-// ============================================================
-// 3. FUNCIONES DE CARGA Y VISUALIZACIÓN
-// ============================================================
+// --- 4. FUNCIONES DE CARGA Y VISUALIZACIÓN ---
 function cargarPuntos() {
   const stored = localStorage.getItem('puntosMapaVida');
   if (stored) {
@@ -244,7 +246,7 @@ function cargarPuntos() {
       {
         id: '1', tipo: 'refugio', nombre: 'Refugio Los Rosales',
         lat: 10.4910, lng: -66.8730,
-        informacion: { direccion: 'Av. Principal', cupo: 150, necesidades: ['Agua', 'Comida', 'Colchonetas'] }
+        informacion: { direccion: 'Av. Principal', cupo: 150, necesidad_infantil: true, necesidades: ['Agua', 'Comida', 'Colchonetas'], voluntarios_infantiles: [] }
       },
       {
         id: '2', tipo: 'edificio_caido', nombre: 'Edificio Las Mercedes',
@@ -298,8 +300,12 @@ function mostrarPuntos(puntos) {
       className: ''
     });
 
+    // Definición clara del tipo (para evitar confusiones)
+    const definicionTexto = tipo.definicion ? `<div class="popup-definicion">ℹ️ ${tipo.definicion}</div>` : '';
+
     let popupContent = `
       <div class="popup-tipo">${tipo.icono} ${tipo.label}</div>
+      ${definicionTexto}
       <strong>${p.nombre}</strong><br>
       ${p.informacion?.direccion ? p.informacion.direccion + '<br>' : ''}
       ${tipo.popupDetalle(p.informacion || {})}
@@ -313,6 +319,8 @@ function mostrarPuntos(puntos) {
       popupContent += `</ul></div>`;
     }
 
+    // --- BOTONES DE ACCIÓN ---
+
     // Botón recogido (solo edificios caídos)
     if (p.tipo === 'edificio_caido' && !recogido) {
       popupContent += `
@@ -324,15 +332,45 @@ function mostrarPuntos(puntos) {
       popupContent += `<div style="margin-top:8px;background:#e0e0e0;padding:6px;border-radius:6px;text-align:center;color:#333;">✅ Ya recogido y limpiado</div>`;
     }
 
-    // Botón eliminar (solo si modoAdmin activo)
+    // Botón ofrecimiento infantil (si aplica)
+    if (p.informacion?.necesidad_infantil && p.informacion?.voluntarios_infantiles !== undefined) {
+      const yaOfrecido = false; // Podríamos implementar con localStorage
+      if (!yaOfrecido) {
+        popupContent += `
+          <button class="btn-ofrecerse-infantil" data-id="${p.id}" style="margin-top:8px;background:#FF6F00;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
+            🧸 Ofrecerse como voluntario para niños
+          </button>
+        `;
+      } else {
+        popupContent += `<div style="margin-top:8px;background:#e0e0e0;padding:6px;border-radius:6px;text-align:center;">✅ Ya te has ofrecido</div>`;
+      }
+      // Lista de voluntarios registrados
+      if (p.informacion.voluntarios_infantiles && p.informacion.voluntarios_infantiles.length > 0) {
+        popupContent += `<div class="popup-seccion"><strong>👥 Voluntarios registrados:</strong><ul class="popup-lista">`;
+        p.informacion.voluntarios_infantiles.forEach(v => {
+          popupContent += `<li>${v.nombre} (${v.rol || 'Voluntario'}) - ${v.telefono || 'Sin teléfono'}</li>`;
+        });
+        popupContent += `</ul></div>`;
+      }
+    }
+
+    // Botón navegación
+    popupContent += `
+      <button class="btn-navegar" data-id="${p.id}" style="margin-top:6px;background:#1a73e8;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
+        🧭 Cómo llegar
+      </button>
+    `;
+
+    // Botón eliminar (solo admin)
     if (modoAdmin) {
       popupContent += `
-        <button class="btn-eliminar-admin" data-id="${p.id}" style="margin-top:8px;background:#d32f2f;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
+        <button class="btn-eliminar-admin" data-id="${p.id}" style="margin-top:6px;background:#d32f2f;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
           🗑️ Eliminar punto
         </button>
       `;
     }
 
+    // Distancia
     if (ubicacionUsuario) {
       const dist = calcularDistancia(ubicacionUsuario.lat, ubicacionUsuario.lng, p.lat, p.lng);
       popupContent += `<div class="popup-distancia">📍 ${dist.toFixed(2)} km de ti</div>`;
@@ -348,15 +386,29 @@ function mostrarPuntos(puntos) {
       // Botón eliminar (admin)
       const btnEliminar = document.querySelector(`.btn-eliminar-admin[data-id="${p.id}"]`);
       if (btnEliminar) btnEliminar.addEventListener('click', (e) => { e.stopPropagation(); eliminarPunto(p.id); });
+      // Botón ofrecimiento infantil
+      const btnOfrecerse = document.querySelector(`.btn-ofrecerse-infantil[data-id="${p.id}"]`);
+      if (btnOfrecerse) {
+        btnOfrecerse.addEventListener('click', function(e) {
+          e.stopPropagation();
+          mostrarFormularioVoluntarioInfantil(p.id);
+        });
+      }
+      // Botón navegación
+      const btnNavegar = document.querySelector(`.btn-navegar[data-id="${p.id}"]`);
+      if (btnNavegar) {
+        btnNavegar.addEventListener('click', function(e) {
+          e.stopPropagation();
+          iniciarNavegacion(p.id);
+        });
+      }
     });
 
     markersLayer.addLayer(marker);
   });
 }
 
-// ============================================================
-// 4. FUNCIONES ADMIN: ELIMINAR Y MARCAR RECOGIDO
-// ============================================================
+// --- 5. FUNCIONES ADMIN: ELIMINAR Y MARCAR RECOGIDO ---
 function marcarRecogido(id) {
   const punto = todosLosPuntos.find(p => p.id === id);
   if (!punto || punto.tipo !== 'edificio_caido' || punto.informacion.recogido) return;
@@ -375,9 +427,7 @@ function eliminarPunto(id) {
   alert('🗑️ Punto eliminado.');
 }
 
-// ============================================================
-// 5. GEOLOCALIZACIÓN
-// ============================================================
+// --- 6. GEOLOCALIZACIÓN ---
 function obtenerUbicacion() {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
@@ -399,9 +449,21 @@ function obtenerUbicacion() {
   }
 }
 
+// --- 7. UTILIDADES ---
+function calcularDistancia(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 // ============================================================
-// 6. SELECCIÓN EN EL MAPA Y FORMULARIO
+// MAPAVIDA - APP COMPLETA
+// PARTE 2: INTERACCIÓN, FORMULARIOS, NAVEGACIÓN
 // ============================================================
+
+// --- 8. SELECCIÓN EN EL MAPA ---
 function activarSeleccion() {
   map.getContainer().style.cursor = 'crosshair';
   map.on('click', onMapClick);
@@ -433,9 +495,7 @@ function onMapClick(e) {
   mostrarFormulario(tipoSeleccionado);
 }
 
-// ============================================================
-// 7. MENÚ Y FORMULARIO
-// ============================================================
+// --- 9. MENÚ Y FORMULARIO ---
 const menuOpciones = document.getElementById('menuOpciones');
 const btnAgregar = document.getElementById('btnAgregar');
 const btnAdmin = document.getElementById('btnAdmin');
@@ -455,7 +515,7 @@ btnAgregar.addEventListener('click', function(e) {
 });
 document.addEventListener('click', function() { menuOpciones.style.display = 'none'; });
 
-// Botón administrador (desbloquear con contraseña)
+// Botón administrador
 btnAdmin.addEventListener('click', function() {
   const pass = prompt('Ingresa la contraseña de administrador:');
   if (pass === ADMIN_PASSWORD) {
@@ -463,7 +523,7 @@ btnAdmin.addEventListener('click', function() {
     btnAdmin.textContent = '🔓 Administrador activo';
     btnAdmin.style.background = '#2e7d32';
     document.getElementById('btnEliminar').style.display = 'block';
-    aplicarFiltros(); // recargar para mostrar botones eliminar
+    aplicarFiltros();
     alert('🔓 Modo administrador activado. Ahora puedes eliminar puntos desde sus popups.');
   } else {
     alert('❌ Contraseña incorrecta.');
@@ -512,9 +572,7 @@ function mostrarFormulario(tipo) {
   puntoEnEdicion = null;
 }
 
-// ============================================================
-// 8. GUARDAR
-// ============================================================
+// --- 10. GUARDAR ---
 btnGuardar.addEventListener('click', function() {
   if (!tipoSeleccionado) { alert('Selecciona un tipo primero'); return; }
   if (!ubicacionSeleccionada) { alert('Toca el mapa para seleccionar ubicación'); return; }
@@ -552,18 +610,20 @@ btnGuardar.addEventListener('click', function() {
   aplicarFiltros();
 });
 
-// ============================================================
-// 9. CANCELAR
-// ============================================================
+// --- 11. CANCELAR ---
 btnCancelar.addEventListener('click', function() {
+  // Si el formulario de voluntario está abierto, cancelarlo también
+  const btnRegistro = document.getElementById('btnRegistrarVoluntario');
+  if (btnRegistro) {
+    // Ya se maneja desde el botón de cancelar del formulario de voluntario
+    return;
+  }
   formulario.style.display = 'none';
   desactivarSeleccion();
   ubicacionSeleccionada = null;
 });
 
-// ============================================================
-// 10. BUSCADOR
-// ============================================================
+// --- 12. BUSCADOR ---
 document.getElementById('btnBuscar').addEventListener('click', async function() {
   const query = document.getElementById('buscador').value.trim();
   if (!query) return;
@@ -584,9 +644,7 @@ document.getElementById('buscador').addEventListener('keypress', function(e) {
   if (e.key === 'Enter') document.getElementById('btnBuscar').click();
 });
 
-// ============================================================
-// 11. FILTROS
-// ============================================================
+// --- 13. FILTROS ---
 document.querySelectorAll('#filtros .filtro-btn').forEach(btn => {
   btn.addEventListener('click', function() {
     document.querySelectorAll('#filtros .filtro-btn').forEach(b => b.classList.remove('activo'));
@@ -596,26 +654,193 @@ document.querySelectorAll('#filtros .filtro-btn').forEach(btn => {
   });
 });
 
-// ============================================================
-// 12. UTILIDADES
-// ============================================================
-function calcularDistancia(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+// --- 14. FORMULARIO DE VOLUNTARIO INFANTIL ---
+function mostrarFormularioVoluntarioInfantil(puntoId) {
+  const punto = todosLosPuntos.find(p => p.id === puntoId);
+  if (!punto) return;
+
+  const html = `
+    <h3 style="color:#FF6F00;">🧸 Ofrecerse como voluntario</h3>
+    <p style="font-size:14px;color:#555;margin-bottom:12px;">
+      Para garantizar la seguridad de los niños, completa todos los campos obligatorios.
+    </p>
+    <label>Nombre completo (2 nombres y 2 apellidos) *</label>
+    <input type="text" id="v_nombre" required />
+
+    <label>Número de cédula *</label>
+    <input type="text" id="v_cedula" required />
+
+    <label>Enlace a foto de la cédula (URL) *</label>
+    <input type="text" id="v_foto_cedula" placeholder="https://..." required />
+
+    <label>Enlace a foto actualizada (URL) *</label>
+    <input type="text" id="v_foto_personal" placeholder="https://..." required />
+
+    <label>Teléfono de contacto</label>
+    <input type="text" id="v_telefono" />
+
+    <label>Rol (recreador, cuidador, voluntario, etc.)</label>
+    <input type="text" id="v_rol" placeholder="Voluntario" />
+
+    <label>Mensaje de seguridad para los niños (opcional)</label>
+    <textarea id="v_mensaje" rows="3">Estamos aquí para cuidarte y protegerte. Tu bienestar es lo más importante.</textarea>
+
+    <button id="btnRegistrarVoluntario" data-id="${puntoId}" style="margin-top:12px;background:#FF6F00;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">
+      ✅ Registrar voluntario
+    </button>
+    <button id="btnCancelarVoluntario" style="margin-top:6px;background:#666;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">
+      ❌ Cancelar
+    </button>
+  `;
+
+  const formTitulo = document.getElementById('formTitulo');
+  const camposDinamicos = document.getElementById('camposDinamicos');
+  
+  formTitulo.innerHTML = '🧸 Registro de voluntario infantil';
+  camposDinamicos.innerHTML = html;
+  formulario.style.display = 'block';
+  
+  document.getElementById('btnGuardar').style.display = 'none';
+  document.getElementById('btnEliminar').style.display = 'none';
+  document.getElementById('btnCancelar').style.display = 'none';
+
+  document.getElementById('btnRegistrarVoluntario').addEventListener('click', function() {
+    const nombre = document.getElementById('v_nombre').value.trim();
+    const cedula = document.getElementById('v_cedula').value.trim();
+    const foto_cedula = document.getElementById('v_foto_cedula').value.trim();
+    const foto_personal = document.getElementById('v_foto_personal').value.trim();
+    const telefono = document.getElementById('v_telefono').value.trim();
+    const rol = document.getElementById('v_rol').value.trim() || 'Voluntario';
+    const mensaje = document.getElementById('v_mensaje').value.trim() || 'Estamos aquí para cuidarte y protegerte.';
+
+    if (!nombre || !cedula || !foto_cedula || !foto_personal) {
+      alert('❌ Todos los campos con * son obligatorios');
+      return;
+    }
+
+    const punto = todosLosPuntos.find(p => p.id === puntoId);
+    if (!punto) return;
+    if (!punto.informacion.voluntarios_infantiles) {
+      punto.informacion.voluntarios_infantiles = [];
+    }
+    punto.informacion.voluntarios_infantiles.push({
+      nombre, cedula, foto_cedula, foto_personal, telefono, rol, mensaje
+    });
+    guardarPuntos();
+    alert('✅ Te has registrado como voluntario para actividades infantiles. ¡Gracias por tu ayuda!');
+    formulario.style.display = 'none';
+    document.getElementById('btnGuardar').style.display = 'block';
+    document.getElementById('btnCancelar').style.display = 'block';
+    aplicarFiltros();
+  });
+
+  document.getElementById('btnCancelarVoluntario').addEventListener('click', function() {
+    formulario.style.display = 'none';
+    document.getElementById('btnGuardar').style.display = 'block';
+    document.getElementById('btnCancelar').style.display = 'block';
+  });
 }
 
-// Mostrar botón admin al cargar
+// --- 15. NAVEGACIÓN (RUTA HASTA UN PUNTO) ---
+function iniciarNavegacion(puntoId) {
+  const punto = todosLosPuntos.find(p => p.id === puntoId);
+  if (!punto) return alert('Punto no encontrado');
+
+  if (!ubicacionUsuario) {
+    alert('🔍 Toca en el mapa para marcar tu ubicación de origen (o espera a que el GPS te localice)');
+    map.once('click', function(e) {
+      const origen = e.latlng;
+      trazarRuta(origen, { lat: punto.lat, lng: punto.lng }, punto.nombre);
+    });
+    return;
+  }
+
+  trazarRuta(
+    { lat: ubicacionUsuario.lat, lng: ubicacionUsuario.lng },
+    { lat: punto.lat, lng: punto.lng },
+    punto.nombre
+  );
+}
+
+function trazarRuta(origen, destino, nombreDestino) {
+  if (controlRuta) {
+    map.removeControl(controlRuta);
+    controlRuta = null;
+  }
+
+  controlRuta = L.Routing.control({
+    waypoints: [
+      L.latLng(origen.lat, origen.lng),
+      L.latLng(destino.lat, destino.lng)
+    ],
+    routeWhileDragging: true,
+    showAlternatives: false,
+    lineOptions: {
+      styles: [{ color: '#E53935', weight: 5, opacity: 0.8 }],
+      extendToWaypoints: false,
+      missingRouteTolerance: 0
+    },
+    altLineOptions: {
+      styles: [{ color: '#1976D2', weight: 3, opacity: 0.4 }]
+    },
+    router: L.Routing.osrmv1({
+      serviceUrl: 'https://router.project-osrm.org/route/v1'
+    }),
+    plan: L.Routing.plan([
+      L.latLng(origen.lat, origen.lng),
+      L.latLng(destino.lat, destino.lng)
+    ], {
+      createMarker: function(i, wp) {
+        if (i === 0) {
+          return L.marker(wp.latLng, {
+            icon: L.divIcon({
+              html: '<div style="background:#1a73e8;border-radius:50%;width:16px;height:16px;border:3px solid white;box-shadow:0 0 10px rgba(26,115,232,0.6);"></div>',
+              iconSize: [16, 16]
+            })
+          }).bindPopup('📍 Origen');
+        } else {
+          return L.marker(wp.latLng, {
+            icon: L.divIcon({
+              html: `<div style="background:#E53935;border-radius:50%;width:20px;height:20px;border:3px solid white;box-shadow:0 0 10px rgba(229,57,53,0.6);display:flex;align-items:center;justify-content:center;font-size:12px;color:white;font-weight:bold;">🏁</div>`,
+              iconSize: [20, 20]
+            })
+          }).bindPopup(`📍 ${nombreDestino}`);
+        }
+      }
+    }),
+    createMarker: function() { return null; },
+    fitSelectedRoutes: true,
+    show: true
+  }).addTo(map);
+
+  controlRuta.on('routesfound', function(e) {
+    const bounds = L.latLngBounds(e.routes[0].coordinates);
+    map.fitBounds(bounds, { padding: [50, 50] });
+    modoNavegacion = true;
+    document.getElementById('btnCancelarNavegacion').style.display = 'block';
+  });
+
+  document.getElementById('btnCancelarNavegacion').addEventListener('click', function() {
+    cancelarNavegacion();
+  });
+}
+
+function cancelarNavegacion() {
+  if (controlRuta) {
+    map.removeControl(controlRuta);
+    controlRuta = null;
+  }
+  modoNavegacion = false;
+  document.getElementById('btnCancelarNavegacion').style.display = 'none';
+  alert('🧭 Navegación cancelada');
+}
+
+// --- 16. MOSTRAR BOTÓN ADMIN Y INICIO ---
 document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('btnAdmin').style.display = 'block';
 });
 
-// ============================================================
-// 13. INICIO
-// ============================================================
 cargarPuntos();
 obtenerUbicacion();
 
-console.log('✅ App con administración, protección infantil, psicología y vacunas');
+console.log('✅ App completa con definiciones, protección infantil y navegación');
