@@ -548,12 +548,13 @@ function mostrarPuntos(puntos) {
 }
 // ============================================================
 // BLOQUE 2B: LISTA, CONTADORES, DETALLE, URGENCIAS, GEOCODIFICACIÓN
+// ===========================================================
+// ============================================================
+// BLOQUE 2B: LISTA, CONTADORES, DETALLE, URGENCIAS, GEOCODIFICACIÓN
 // ============================================================
 
-// --- FILTRO DE LISTA (variable global) ---
 let filtroLista = 'todos';
 
-// --- ACTUALIZAR CONTADORES ---
 function actualizarContadores() {
   const contenedor = document.getElementById('contenedorContadores');
   if (!contenedor) return;
@@ -588,14 +589,9 @@ function actualizarContadores() {
   contenedor.innerHTML = html;
 }
 
-// --- MOSTRAR LISTA DE PUNTOS CON FILTROS FUNCIONALES ---
 function mostrarListaPuntos() {
   const panel = document.getElementById('panelLista');
   panel.style.display = 'flex';
-  if (panel.classList.contains('panel-minimizado')) {
-    panel.classList.remove('panel-minimizado');
-    document.getElementById('btnMinimizarLista').textContent = '➖';
-  }
   actualizarContadores();
 
   const contenedor = document.getElementById('contenedorLista');
@@ -604,8 +600,7 @@ function mostrarListaPuntos() {
   let puntosFiltrados = [...todosLosPuntos];
   
   switch (filtroLista) {
-    case 'todos':
-      break;
+    case 'todos': break;
     case 'urgentes':
       puntosFiltrados = puntosFiltrados.filter(p => p.informacion?.urgente === true);
       break;
@@ -656,17 +651,12 @@ function mostrarListaPuntos() {
   });
 }
 
-// --- DETALLE DE PUNTO ---
 function mostrarDetallePunto(id) {
   const punto = todosLosPuntos.find(p => p.id === id);
   if (!punto) { alert('Punto no encontrado'); return; }
 
   const panel = document.getElementById('panelDetalle');
   panel.style.display = 'flex';
-  if (panel.classList.contains('panel-minimizado')) {
-    panel.classList.remove('panel-minimizado');
-    document.getElementById('btnMinimizarDetalle').textContent = '➖';
-  }
   document.getElementById('detalleTitulo').textContent = `📌 ${punto.nombre}`;
 
   const tipo = TIPOS[punto.tipo];
@@ -786,14 +776,9 @@ function cerrarLista() {
   document.getElementById('panelDetalle').style.display = 'none';
 }
 
-// --- URGENCIAS ---
 function mostrarUrgencias() {
   const panel = document.getElementById('panelUrgencias');
   panel.style.display = 'flex';
-  if (panel.classList.contains('panel-minimizado')) {
-    panel.classList.remove('panel-minimizado');
-    document.getElementById('btnMinimizarUrgencias').textContent = '➖';
-  }
 
   const contenedor = document.getElementById('contenedorUrgencias');
   if (!contenedor) return;
@@ -847,7 +832,6 @@ function mostrarUrgencias() {
   });
 }
 
-// --- GEOCODIFICACIÓN INVERSA (auto-completar dirección) ---
 function obtenerDireccionDesdeCoordenadas(lat, lng) {
   const campoDireccion = document.getElementById('campo_direccion');
   if (!campoDireccion) return;
@@ -899,57 +883,94 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 // ============================================================
-// BLOQUE 2C: MINIMIZAR POPUPS
+// BLOQUE 2C: GESTOS TÁCTILES PARA MINIMIZAR/EXPANDIR PANELES
 // ============================================================
 
-function toggleMinimizar(panelId, botonId) {
-  const panel = document.getElementById(panelId);
-  const boton = document.getElementById(botonId);
-  if (!panel || !boton) return;
+// --- Variables de gestos ---
+let touchStartY = 0;
+let touchStartTime = 0;
+let lastTapTime = 0;
 
-  if (panel.classList.contains('panel-minimizado')) {
+// --- Función para alternar minimizar/expandir ---
+function togglePanel(panelId) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  
+  const isMinimized = panel.classList.contains('panel-minimizado');
+  
+  if (isMinimized) {
     // Expandir
     panel.classList.remove('panel-minimizado');
-    boton.textContent = '➖';
     panel.style.height = '';
     panel.style.minHeight = '';
   } else {
     // Minimizar
     panel.classList.add('panel-minimizado');
-    boton.textContent = '➕';
     panel.style.height = '50px';
     panel.style.minHeight = '50px';
   }
 }
 
-// Eventos de minimizar
-document.getElementById('btnMinimizarLista').addEventListener('click', function(e) {
-  e.stopPropagation();
-  toggleMinimizar('panelLista', 'btnMinimizarLista');
-});
+// --- Configurar gestos en un encabezado ---
+function setupGestos(headerId, panelId) {
+  const header = document.getElementById(headerId);
+  const panel = document.getElementById(panelId);
+  if (!header || !panel) return;
 
-document.getElementById('btnMinimizarDetalle').addEventListener('click', function(e) {
-  e.stopPropagation();
-  toggleMinimizar('panelDetalle', 'btnMinimizarDetalle');
-});
-
-document.getElementById('btnMinimizarUrgencias').addEventListener('click', function(e) {
-  e.stopPropagation();
-  toggleMinimizar('panelUrgencias', 'btnMinimizarUrgencias');
-});
-
-// Hacer clic en el encabezado de un panel minimizado para expandirlo
-document.addEventListener('click', function(e) {
-  const target = e.target.closest('.panel-minimizado .header-lista, .panel-minimizado .header-detalle, .panel-minimizado .header-urgencias');
-  if (target) {
-    const panel = target.closest('.panel-minimizado');
-    if (panel) {
-      const botonId = panel.id === 'panelLista' ? 'btnMinimizarLista' :
-                      panel.id === 'panelDetalle' ? 'btnMinimizarDetalle' :
-                      'btnMinimizarUrgencias';
-      toggleMinimizar(panel.id, botonId);
+  // --- Doble toque ---
+  header.addEventListener('click', function(e) {
+    // Evitar que el doble toque también cierre el panel si se hace clic en el botón cerrar
+    if (e.target.closest('button')) return;
+    
+    const now = Date.now();
+    const timeSinceLastTap = now - lastTapTime;
+    if (timeSinceLastTap < 300) {
+      // Doble toque detectado
+      togglePanel(panelId);
+      lastTapTime = 0;
+    } else {
+      lastTapTime = now;
     }
-  }
+  });
+
+  // --- Deslizamiento vertical (swipe) ---
+  header.addEventListener('touchstart', function(e) {
+    touchStartY = e.touches[0].clientY;
+    touchStartTime = Date.now();
+  }, { passive: true });
+
+  header.addEventListener('touchmove', function(e) {
+    // Prevenir el scroll del mapa al deslizar en el encabezado
+    e.preventDefault();
+  }, { passive: false });
+
+  header.addEventListener('touchend', function(e) {
+    const touchEndY = e.changedTouches[0].clientY;
+    const diffY = touchStartY - touchEndY; // positivo = deslizar arriba, negativo = abajo
+    const timeDiff = Date.now() - touchStartTime;
+    
+    // Solo considerar si el deslizamiento fue rápido (menos de 300ms) y con suficiente distancia
+    if (timeDiff < 300 && Math.abs(diffY) > 30) {
+      if (diffY > 0) {
+        // Deslizar hacia arriba → minimizar
+        panel.classList.add('panel-minimizado');
+        panel.style.height = '50px';
+        panel.style.minHeight = '50px';
+      } else {
+        // Deslizar hacia abajo → expandir
+        panel.classList.remove('panel-minimizado');
+        panel.style.height = '';
+        panel.style.minHeight = '';
+      }
+    }
+  }, { passive: true });
+}
+
+// --- Inicializar gestos para cada panel ---
+document.addEventListener('DOMContentLoaded', function() {
+  setupGestos('headerLista', 'panelLista');
+  setupGestos('headerDetalle', 'panelDetalle');
+  setupGestos('headerUrgencias', 'panelUrgencias');
 });
 // ============================================================
 // BLOQUE 3: ADMIN, GEOLOCALIZACIÓN, SELECCIÓN, MENÚ, GUARDADO, SEGURIDAD
