@@ -1,8 +1,9 @@
 // ============================================================
-// MAPAVIDA - BLOQUE 1 (CONFIGURACIÓN, DEFINICIONES Y TIPOS)
+// MAPAVIDA - BLOQUE 1: CONFIGURACIÓN, DEFINICIONES Y TIPOS
 // ============================================================
 
 const ADMIN_PASSWORD = 'MapaVida2026';
+const MASTER_PASSWORD = 'SeguridadMapa2026'; // Cambia esto por tu contraseña maestra
 
 const map = L.map('map').setView([10.4806, -66.9036], 12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -25,9 +26,6 @@ let modoNavegacion = false;
 
 document.getElementById('cargando').style.display = 'none';
 
-// ============================================================
-// DEFINICIONES
-// ============================================================
 const DEFINICIONES = {
   edificio_caido: 'Estructura que ya colapsó total o parcialmente. No ingresar. Necesita maquinaria y personal especializado para remover escombros.',
   peligro_derrumbe: 'Estructura con daños estructurales visibles (grietas, inclinación, etc.) que podría colapsar en cualquier momento. Manténgase alejado.',
@@ -40,9 +38,6 @@ const DEFINICIONES = {
   vacuna_tetanos: 'Punto de vacunación contra el tétano (enfermedad grave por heridas con objetos contaminados).'
 };
 
-// ============================================================
-// TIPOS DE PUNTOS (CON URGENCIA)
-// ============================================================
 const TIPOS = {
   refugio: {
     label: 'Refugio', color: '#2E7D32', icono: '🏠', requiereAdmin: false,
@@ -51,16 +46,22 @@ const TIPOS = {
       { id: 'nombre', label: 'Nombre del refugio *', type: 'text', required: true },
       { id: 'direccion', label: 'Dirección', type: 'text', required: false },
       { id: 'cupo', label: 'Cupo disponible (personas)', type: 'number', required: false },
-      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
+      { id: 'nombre_registrador', label: 'Tu nombre completo *', type: 'text', required: true },
+      { id: 'rol_registrador', label: 'Tu rol *', type: 'select', options: ['Voluntario', 'Coordinador', 'Líder comunitario', 'Rescatista', 'Personal de salud', 'Otro'], required: true },
       { id: 'necesidad_infantil', label: '¿Necesitan actividades recreativas o cuidado para niños?', type: 'select', options: ['No', 'Sí'], required: false },
+      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'necesidades', label: 'Necesidades detalladas (una por línea)', type: 'textarea', required: false }
     ],
     procesar: (d) => ({
       cupo: parseInt(d.cupo) || 0,
+      nombre_registrador: d.nombre_registrador || '',
+      rol_registrador: d.rol_registrador || 'Voluntario',
       urgente: d.urgente === 'Sí',
       necesidad_infantil: d.necesidad_infantil === 'Sí',
       necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : [],
-      voluntarios_infantiles: []
+      voluntarios_infantiles: [],
+      fecha_creacion: new Date().toLocaleString(),
+      fecha_edicion: new Date().toLocaleString()
     }),
     popupDetalle: (info) => {
       let html = `<div class="popup-info">👥 Cupo: ${info.cupo || 'N/E'}</div>`;
@@ -76,20 +77,26 @@ const TIPOS = {
     campos: [
       { id: 'nombre', label: 'Nombre del centro *', type: 'text', required: true },
       { id: 'direccion', label: 'Dirección', type: 'text', required: false },
-      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'necesarios', label: 'Insumos necesarios (separados por comas)', type: 'textarea', required: false },
       { id: 'suficientes', label: 'Insumos que YA NO necesitan (separados por comas)', type: 'textarea', required: false },
+      { id: 'nombre_registrador', label: 'Tu nombre completo *', type: 'text', required: true },
+      { id: 'rol_registrador', label: 'Tu rol *', type: 'select', options: ['Voluntario', 'Coordinador', 'Líder comunitario', 'Rescatista', 'Personal de salud', 'Otro'], required: true },
       { id: 'necesidad_infantil', label: '¿Necesitan actividades recreativas o cuidado para niños?', type: 'select', options: ['No', 'Sí'], required: false },
+      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'necesidades', label: 'Necesidades detalladas (una por línea)', type: 'textarea', required: false }
     ],
     procesar: (d) => ({
       necesita: d.necesarios ? d.necesarios.split(',').map(s => s.trim()).filter(Boolean) : [],
       suficientes: d.suficientes ? d.suficientes.split(',').map(s => s.trim()).filter(Boolean) : [],
+      nombre_registrador: d.nombre_registrador || '',
+      rol_registrador: d.rol_registrador || 'Voluntario',
       urgente: d.urgente === 'Sí',
       necesidad_infantil: d.necesidad_infantil === 'Sí',
       necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : [],
       voluntarios_infantiles: [],
-      envios: []
+      envios: [],
+      fecha_creacion: new Date().toLocaleString(),
+      fecha_edicion: new Date().toLocaleString()
     }),
     popupDetalle: (info) => {
       let html = '';
@@ -106,16 +113,22 @@ const TIPOS = {
     campos: [
       { id: 'nombre', label: 'Nombre del hospital *', type: 'text', required: true },
       { id: 'direccion', label: 'Dirección', type: 'text', required: false },
-      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'medicamentos', label: 'Medicamentos necesarios (separados por comas)', type: 'textarea', required: false },
       { id: 'sangre', label: '¿Necesitan donaciones de sangre?', type: 'select', options: ['No', 'Sí'], required: false },
+      { id: 'nombre_registrador', label: 'Tu nombre completo *', type: 'text', required: true },
+      { id: 'rol_registrador', label: 'Tu rol *', type: 'select', options: ['Voluntario', 'Coordinador', 'Líder comunitario', 'Rescatista', 'Personal de salud', 'Otro'], required: true },
+      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'necesidades', label: 'Necesidades detalladas (una por línea)', type: 'textarea', required: false }
     ],
     procesar: (d) => ({
       medicamentos: d.medicamentos ? d.medicamentos.split(',').map(s => s.trim()).filter(Boolean) : [],
       necesita_sangre: d.sangre === 'Sí',
+      nombre_registrador: d.nombre_registrador || '',
+      rol_registrador: d.rol_registrador || 'Voluntario',
       urgente: d.urgente === 'Sí',
-      necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []
+      necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : [],
+      fecha_creacion: new Date().toLocaleString(),
+      fecha_edicion: new Date().toLocaleString()
     }),
     popupDetalle: (info) => {
       let html = '';
@@ -130,14 +143,20 @@ const TIPOS = {
     campos: [
       { id: 'nombre', label: 'Ubicación / referencia *', type: 'text', required: true },
       { id: 'apoyo', label: '¿Qué apoyo necesitan? (ej: agua, comida, escombros)', type: 'textarea', required: false },
+      { id: 'nombre_registrador', label: 'Tu nombre completo *', type: 'text', required: true },
+      { id: 'rol_registrador', label: 'Tu rol *', type: 'select', options: ['Voluntario', 'Coordinador', 'Líder comunitario', 'Rescatista', 'Personal de salud', 'Otro'], required: true },
       { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'necesidades', label: 'Necesidades detalladas (una por línea)', type: 'textarea', required: false }
     ],
     procesar: (d) => ({
       apoyo: d.apoyo ? d.apoyo.split(',').map(s => s.trim()).filter(Boolean) : [],
+      nombre_registrador: d.nombre_registrador || '',
+      rol_registrador: d.rol_registrador || 'Voluntario',
       urgente: d.urgente === 'Sí',
       recogido: false,
-      necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []
+      necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : [],
+      fecha_creacion: new Date().toLocaleString(),
+      fecha_edicion: new Date().toLocaleString()
     }),
     popupDetalle: (info) => {
       let html = `<div class="popup-info" style="color:#C62828;">⚠️ Edificio colapsado</div>`;
@@ -151,13 +170,19 @@ const TIPOS = {
     campos: [
       { id: 'nombre', label: 'Ubicación / referencia *', type: 'text', required: true },
       { id: 'advertencia', label: 'Advertencia adicional (opcional)', type: 'textarea', required: false },
+      { id: 'nombre_registrador', label: 'Tu nombre completo *', type: 'text', required: true },
+      { id: 'rol_registrador', label: 'Tu rol *', type: 'select', options: ['Voluntario', 'Coordinador', 'Líder comunitario', 'Rescatista', 'Personal de salud', 'Otro'], required: true },
       { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'necesidades', label: 'Necesidades detalladas (una por línea)', type: 'textarea', required: false }
     ],
     procesar: (d) => ({
       advertencia: d.advertencia || 'Manténgase alejado, estructura inestable',
+      nombre_registrador: d.nombre_registrador || '',
+      rol_registrador: d.rol_registrador || 'Voluntario',
       urgente: d.urgente === 'Sí',
-      necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []
+      necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : [],
+      fecha_creacion: new Date().toLocaleString(),
+      fecha_edicion: new Date().toLocaleString()
     }),
     popupDetalle: (info) => `<div class="popup-advertencia">⚠️ ${info.advertencia}</div>`
   },
@@ -167,13 +192,19 @@ const TIPOS = {
     campos: [
       { id: 'nombre', label: 'Ubicación / referencia *', type: 'text', required: true },
       { id: 'nota', label: 'Nota adicional (opcional)', type: 'textarea', required: false },
+      { id: 'nombre_registrador', label: 'Tu nombre completo *', type: 'text', required: true },
+      { id: 'rol_registrador', label: 'Tu rol *', type: 'select', options: ['Voluntario', 'Coordinador', 'Líder comunitario', 'Rescatista', 'Personal de salud', 'Otro'], required: true },
       { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'necesidades', label: 'Necesidades detalladas (una por línea)', type: 'textarea', required: false }
     ],
     procesar: (d) => ({
       mensaje: d.nota || 'Estructura no ha sido inspeccionada por personal autorizado',
+      nombre_registrador: d.nombre_registrador || '',
+      rol_registrador: d.rol_registrador || 'Voluntario',
       urgente: d.urgente === 'Sí',
-      necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []
+      necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : [],
+      fecha_creacion: new Date().toLocaleString(),
+      fecha_edicion: new Date().toLocaleString()
     }),
     popupDetalle: (info) => `<div class="popup-info" style="color:#6A1B9A;">❓ ${info.mensaje}</div>`
   },
@@ -183,16 +214,22 @@ const TIPOS = {
     campos: [
       { id: 'nombre', label: 'Nombre del centro veterinario *', type: 'text', required: true },
       { id: 'direccion', label: 'Dirección', type: 'text', required: false },
-      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'servicios', label: 'Servicios que ofrecen (separados por comas)', type: 'textarea', required: false },
       { id: 'emergencia', label: '¿Atienden emergencias 24h?', type: 'select', options: ['No', 'Sí'], required: false },
+      { id: 'nombre_registrador', label: 'Tu nombre completo *', type: 'text', required: true },
+      { id: 'rol_registrador', label: 'Tu rol *', type: 'select', options: ['Voluntario', 'Coordinador', 'Líder comunitario', 'Rescatista', 'Personal de salud', 'Otro'], required: true },
+      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'necesidades', label: 'Necesidades detalladas (una por línea)', type: 'textarea', required: false }
     ],
     procesar: (d) => ({
       servicios: d.servicios ? d.servicios.split(',').map(s => s.trim()).filter(Boolean) : [],
       emergencia_24h: d.emergencia === 'Sí',
+      nombre_registrador: d.nombre_registrador || '',
+      rol_registrador: d.rol_registrador || 'Voluntario',
       urgente: d.urgente === 'Sí',
-      necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []
+      necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : [],
+      fecha_creacion: new Date().toLocaleString(),
+      fecha_edicion: new Date().toLocaleString()
     }),
     popupDetalle: (info) => {
       let html = '';
@@ -207,16 +244,22 @@ const TIPOS = {
     campos: [
       { id: 'nombre', label: 'Nombre del centro / profesional *', type: 'text', required: true },
       { id: 'direccion', label: 'Dirección', type: 'text', required: false },
-      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'horario', label: 'Horario de atención', type: 'text', required: false },
       { id: 'contacto', label: 'Teléfono de contacto', type: 'text', required: false },
+      { id: 'nombre_registrador', label: 'Tu nombre completo *', type: 'text', required: true },
+      { id: 'rol_registrador', label: 'Tu rol *', type: 'select', options: ['Voluntario', 'Coordinador', 'Líder comunitario', 'Rescatista', 'Personal de salud', 'Otro'], required: true },
+      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'necesidades', label: 'Información adicional (una por línea)', type: 'textarea', required: false }
     ],
     procesar: (d) => ({
       horario: d.horario || '',
       contacto: d.contacto || '',
+      nombre_registrador: d.nombre_registrador || '',
+      rol_registrador: d.rol_registrador || 'Voluntario',
       urgente: d.urgente === 'Sí',
-      necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []
+      necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : [],
+      fecha_creacion: new Date().toLocaleString(),
+      fecha_edicion: new Date().toLocaleString()
     }),
     popupDetalle: (info) => {
       let html = '';
@@ -231,16 +274,22 @@ const TIPOS = {
     campos: [
       { id: 'nombre', label: 'Nombre del punto de vacunación *', type: 'text', required: true },
       { id: 'direccion', label: 'Dirección', type: 'text', required: false },
-      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'horario', label: 'Horario de aplicación', type: 'text', required: false },
       { id: 'contacto', label: 'Teléfono de contacto', type: 'text', required: false },
+      { id: 'nombre_registrador', label: 'Tu nombre completo *', type: 'text', required: true },
+      { id: 'rol_registrador', label: 'Tu rol *', type: 'select', options: ['Voluntario', 'Coordinador', 'Líder comunitario', 'Rescatista', 'Personal de salud', 'Otro'], required: true },
+      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'necesidades', label: 'Información adicional (una por línea)', type: 'textarea', required: false }
     ],
     procesar: (d) => ({
       horario: d.horario || '',
       contacto: d.contacto || '',
+      nombre_registrador: d.nombre_registrador || '',
+      rol_registrador: d.rol_registrador || 'Voluntario',
       urgente: d.urgente === 'Sí',
-      necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []
+      necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : [],
+      fecha_creacion: new Date().toLocaleString(),
+      fecha_edicion: new Date().toLocaleString()
     }),
     popupDetalle: (info) => {
       let html = '';
@@ -251,7 +300,7 @@ const TIPOS = {
   }
 };
 // ============================================================
-// BLOQUE 2: CARGA, GUARDADO, FILTROS, MOSTRAR, LISTA, CONTADORES, DETALLE
+// BLOQUE 2A: CARGA, GUARDADO, FILTROS Y MOSTRAR PUNTOS
 // ============================================================
 
 function cargarPuntos() {
@@ -267,12 +316,18 @@ function cargarPuntos() {
       {
         id: '1', tipo: 'refugio', nombre: 'Refugio Los Rosales',
         lat: 10.4910, lng: -66.8730,
-        informacion: { direccion: 'Av. Principal', cupo: 150, urgente: true, necesidad_infantil: true, necesidades: ['Agua', 'Comida', 'Colchonetas'], voluntarios_infantiles: [] }
-      },
-      {
-        id: '2', tipo: 'centro_acopio', nombre: 'Centro de Acopio Las Mercedes',
-        lat: 10.5000, lng: -66.9000,
-        informacion: { direccion: 'Calle 2', necesita: ['Agua', 'Comida enlatada'], suficientes: ['Ropa'], urgente: false, necesidad_infantil: false, necesidades: ['Organizar donaciones'], envios: [] }
+        informacion: {
+          direccion: 'Av. Principal',
+          cupo: 150,
+          urgente: true,
+          necesidad_infantil: true,
+          necesidades: ['Agua', 'Comida', 'Colchonetas'],
+          nombre_registrador: 'Juan Pérez',
+          rol_registrador: 'Coordinador',
+          voluntarios_infantiles: [],
+          fecha_creacion: new Date().toLocaleString(),
+          fecha_edicion: new Date().toLocaleString()
+        }
       }
     ];
     localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
@@ -336,15 +391,30 @@ function mostrarPuntos(puntos) {
       ${tipo.popupDetalle(p.informacion || {})}
     `;
 
+    // Fecha y hora (visible para todos)
+    const fechaCreacion = p.informacion?.fecha_creacion || 'Sin fecha';
+    const fechaEdicion = p.informacion?.fecha_edicion || fechaCreacion;
+    popupContent += `<div class="popup-info" style="font-size:11px;color:#777;margin-top:4px;">🕒 Creado: ${fechaCreacion}</div>`;
+    if (fechaEdicion !== fechaCreacion) {
+      popupContent += `<div class="popup-info" style="font-size:11px;color:#777;">✏️ Editado: ${fechaEdicion}</div>`;
+    }
+
+    // Datos del registrador (solo admin)
+    if (modoAdmin) {
+      const nombreReg = p.informacion?.nombre_registrador || 'No especificado';
+      const rolReg = p.informacion?.rol_registrador || 'Sin rol';
+      popupContent += `<div class="popup-registrador">👤 Registrado por: ${nombreReg} (${rolReg})</div>`;
+    }
+
     const necesidades = p.informacion?.necesidades || [];
     const esUrgente = p.informacion?.urgente || false;
 
     if (necesidades.length > 0) {
-      const estiloFondo = esUrgente 
-        ? 'background:#ffebee;border-left:4px solid #d32f2f;padding:6px 10px;border-radius:4px;margin-top:8px;' 
+      const estiloFondo = esUrgente
+        ? 'background:#ffebee;border-left:4px solid #d32f2f;padding:6px 10px;border-radius:4px;margin-top:8px;'
         : 'background:#fff3e0;border-left:4px solid #E53935;padding:6px 10px;border-radius:4px;margin-top:8px;';
-      const tituloUrgencia = esUrgente 
-        ? '<span style="background:#d32f2f;color:white;padding:2px 8px;border-radius:4px;font-size:12px;">🚨 URGENTE</span> ' 
+      const tituloUrgencia = esUrgente
+        ? '<span style="background:#d32f2f;color:white;padding:2px 8px;border-radius:4px;font-size:12px;">🚨 URGENTE</span> '
         : '';
       popupContent += `<div class="popup-seccion" style="${estiloFondo}">
         <strong style="color:${esUrgente ? '#d32f2f' : '#E53935'};font-size:15px;">🔥 Prioridad ${tituloUrgencia}</strong>
@@ -353,7 +423,32 @@ function mostrarPuntos(puntos) {
       popupContent += `</ul></div>`;
     }
 
-    // Botones de acción
+    // --- SECCIÓN PROTECCIÓN INFANTIL ---
+    if (p.informacion?.necesidad_infantil && p.informacion?.voluntarios_infantiles !== undefined) {
+      popupContent += `
+        <div style="margin-top:8px;padding:10px;background:#ffebee;border-left:4px solid #d32f2f;border-radius:6px;color:#d32f2f;font-weight:bold;font-size:14px;">
+          🛡️ ¡ATENCIÓN!<br>
+          Los niños y niñas son nuestra prioridad. Por su seguridad, <strong>ninguna persona podrá acercarse a ellos</strong> sin haber completado su <strong>información completa</strong> (nombre, cédula, fotos y contacto) y sin que <strong>los administradores hayan verificado su identidad</strong>.<br>
+          Si ves a alguien sin estos requisitos, <strong>no permitas que se acerque</strong> a los menores y reporta la situación a un administrador.
+        </div>
+      `;
+      popupContent += `
+        <button class="btn-ofrecerse-infantil" data-id="${p.id}" style="margin-top:8px;background:#FF6F00;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
+          🧸 Ofrecerse como voluntario para niños
+        </button>
+      `;
+      if (modoAdmin && p.informacion.voluntarios_infantiles && p.informacion.voluntarios_infantiles.length > 0) {
+        popupContent += `<div class="popup-seccion"><strong style="color:#1a237e;">👥 Voluntarios registrados (solo administradores):</strong><ul class="popup-lista">`;
+        p.informacion.voluntarios_infantiles.forEach(v => {
+          popupContent += `<li><strong>${v.nombre}</strong> (${v.rol || 'Voluntario'})<br>📞 ${v.telefono || 'Sin teléfono'}<br>🪪 Cédula: ${v.cedula || 'No especificada'}</li>`;
+        });
+        popupContent += `</ul></div>`;
+      } else if (p.informacion.voluntarios_infantiles && p.informacion.voluntarios_infantiles.length > 0) {
+        popupContent += `<div style="font-size:13px;color:#777;margin-top:6px;text-align:center;">👥 ${p.informacion.voluntarios_infantiles.length} voluntario(s) registrado(s) (contacta a un administrador para ver los detalles)</div>`;
+      }
+    }
+
+    // --- BOTONES DE ACCIÓN ---
     if (p.tipo === 'edificio_caido' && !recogido) {
       popupContent += `
         <button class="btn-recoger" data-id="${p.id}" style="margin-top:8px;background:#4CAF50;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
@@ -364,21 +459,7 @@ function mostrarPuntos(puntos) {
       popupContent += `<div style="margin-top:8px;background:#e0e0e0;padding:6px;border-radius:6px;text-align:center;color:#333;">✅ Ya recogido y limpiado</div>`;
     }
 
-    if (p.informacion?.necesidad_infantil && p.informacion?.voluntarios_infantiles !== undefined) {
-      popupContent += `
-        <button class="btn-ofrecerse-infantil" data-id="${p.id}" style="margin-top:8px;background:#FF6F00;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
-          🧸 Ofrecerse como voluntario para niños
-        </button>
-      `;
-      if (p.informacion.voluntarios_infantiles && p.informacion.voluntarios_infantiles.length > 0) {
-        popupContent += `<div class="popup-seccion"><strong>👥 Voluntarios registrados:</strong><ul class="popup-lista">`;
-        p.informacion.voluntarios_infantiles.forEach(v => {
-          popupContent += `<li>${v.nombre} (${v.rol || 'Voluntario'}) - ${v.telefono || 'Sin teléfono'}</li>`;
-        });
-        popupContent += `</ul></div>`;
-      }
-    }
-
+    // --- CENTRO DE ACOPIO: envíos ---
     if (p.tipo === 'centro_acopio') {
       popupContent += `
         <button class="btn-crear-envio" data-id="${p.id}" style="margin-top:8px;background:#F57C00;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
@@ -386,20 +467,25 @@ function mostrarPuntos(puntos) {
         </button>
       `;
       if (p.informacion?.envios && p.informacion.envios.length > 0) {
-        popupContent += `<div class="popup-seccion"><strong>🚚 Envíos activos:</strong><ul class="popup-lista">`;
+        popupContent += `<div class="popup-seccion" style="background:#e3f2fd;padding:8px;border-radius:6px;margin-top:6px;">
+          <strong style="color:#0d47a1;">🚚 Transporte de insumos</strong>
+          <ul class="popup-lista">`;
         p.informacion.envios.forEach(e => {
           const estadoColor = e.estado === 'entregado' ? '#2e7d32' : e.estado === 'incidencia' ? '#d32f2f' : '#F57C00';
-          popupContent += `<li>
+          const aprobaciones = `O:${e.aprobacionOrigen ? '✅' : '⏳'} C:${e.aprobacionConductor ? '✅' : '⏳'} D:${e.aprobacionDestino ? '✅' : '⏳'}`;
+          popupContent += `<li style="margin-bottom:6px;padding:4px;border-bottom:1px solid #eee;">
             <strong>${e.contenido}</strong><br>
             ➜ ${e.destinoNombre}<br>
-            <span style="color:${estadoColor};">${e.estado}</span>
-            ${e.incidencias && e.incidencias.length > 0 ? ` ⚠️ ${e.incidencias.filter(i => !i.resuelto).length} incidencias pendientes` : ''}
+            <span style="color:${estadoColor};">${e.estado}</span> | ${aprobaciones}
+            ${e.conductor ? `| 👤 ${e.conductor.nombre}` : ''}
+            ${e.estado === 'pendiente' || e.estado === 'origen_aprobado' ? `<br><span style="font-size:12px;color:#1a73e8;">🔗 <a href="${e.enlace}" target="_blank">${e.enlace}</a></span>` : ''}
           </li>`;
         });
         popupContent += `</ul></div>`;
       }
     }
 
+    // Navegación
     popupContent += `
       <button class="btn-navegar" data-id="${p.id}" style="margin-top:6px;background:#1a73e8;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
         🧭 Cómo llegar
@@ -460,11 +546,11 @@ function mostrarPuntos(puntos) {
     markersLayer.addLayer(marker);
   });
 }
-
 // ============================================================
-// NUEVAS FUNCIONES: LISTA, CONTADORES Y PANEL DE DETALLE
+// BLOQUE 2B: LISTA, CONTADORES, DETALLE, URGENCIAS, GEOCODIFICACIÓN
 // ============================================================
 
+// --- CONTADORES ---
 function actualizarContadores() {
   const contenedor = document.getElementById('contenedorContadores');
   if (!contenedor) return;
@@ -499,6 +585,7 @@ function actualizarContadores() {
   contenedor.innerHTML = html;
 }
 
+// --- LISTA DE PUNTOS ---
 function mostrarListaPuntos() {
   const panel = document.getElementById('panelLista');
   panel.style.display = 'flex';
@@ -543,6 +630,7 @@ function mostrarListaPuntos() {
   });
 }
 
+// --- DETALLE DE PUNTO ---
 function mostrarDetallePunto(id) {
   const punto = todosLosPuntos.find(p => p.id === id);
   if (!punto) { alert('Punto no encontrado'); return; }
@@ -564,7 +652,18 @@ function mostrarDetallePunto(id) {
     <div style="margin-bottom:12px;">
       <span style="font-weight:bold;">Coordenadas:</span> ${punto.lat}, ${punto.lng}
     </div>
+    <div style="margin-bottom:12px;">
+      <span style="font-weight:bold;">Creado:</span> ${punto.informacion?.fecha_creacion || 'Sin fecha'}
+    </div>
   `;
+
+  if (modoAdmin) {
+    const nombreReg = punto.informacion?.nombre_registrador || 'No especificado';
+    const rolReg = punto.informacion?.rol_registrador || 'Sin rol';
+    html += `<div style="margin-bottom:12px;background:#f0f0f0;padding:8px;border-radius:4px;">
+      <strong>👤 Registrado por:</strong> ${nombreReg} (${rolReg})
+    </div>`;
+  }
 
   const necesidades = punto.informacion?.necesidades || [];
   const esUrgente = punto.informacion?.urgente || false;
@@ -577,7 +676,7 @@ function mostrarDetallePunto(id) {
   }
 
   for (const [key, val] of Object.entries(punto.informacion || {})) {
-    if (key === 'direccion' || key === 'necesidades' || key === 'urgente' || key === 'voluntarios_infantiles' || key === 'envios') continue;
+    if (key === 'direccion' || key === 'necesidades' || key === 'urgente' || key === 'voluntarios_infantiles' || key === 'envios' || key === 'nombre_registrador' || key === 'rol_registrador' || key === 'fecha_creacion' || key === 'fecha_edicion') continue;
     if (val && val.length > 0) {
       html += `<div style="margin-bottom:8px;"><strong>${key}:</strong> ${typeof val === 'string' ? val : JSON.stringify(val)}</div>`;
     }
@@ -656,21 +755,145 @@ function cerrarLista() {
   document.getElementById('panelLista').style.display = 'none';
   document.getElementById('panelDetalle').style.display = 'none';
 }
+
+// --- URGENCIAS ---
+function mostrarUrgencias() {
+  const panel = document.getElementById('panelUrgencias');
+  panel.style.display = 'flex';
+
+  const contenedor = document.getElementById('contenedorUrgencias');
+  if (!contenedor) return;
+
+  const urgentes = todosLosPuntos.filter(p => p.informacion?.urgente && p.informacion?.necesidades?.length > 0);
+
+  if (urgentes.length === 0) {
+    contenedor.innerHTML = '<p style="text-align:center;color:#666;padding:40px;">No hay urgencias reportadas en este momento.</p>';
+    return;
+  }
+
+  let html = '';
+  urgentes.forEach(p => {
+    const tipo = TIPOS[p.tipo];
+    if (!tipo) return;
+
+    html += `
+      <div style="background:#fff5f5;border-left:4px solid #d32f2f;padding:12px;margin-bottom:12px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <div>
+            <strong style="color:#d32f2f;">${tipo.icono} ${p.nombre}</strong>
+            <span style="font-size:13px;color:#555;margin-left:8px;">${tipo.label}</span>
+            ${p.informacion?.direccion ? `<span style="font-size:13px;color:#555;margin-left:8px;">📍 ${p.informacion.direccion}</span>` : ''}
+          </div>
+          <span style="font-size:12px;background:#d32f2f;color:white;padding:2px 10px;border-radius:12px;">🚨 URGENTE</span>
+        </div>
+        <div style="margin-top:6px;font-size:14px;">
+          <strong>Necesidades urgentes:</strong>
+          <ul style="margin:4px 0 0 18px;">
+            ${p.informacion.necesidades.map(n => `<li>${n}</li>`).join('')}
+          </ul>
+        </div>
+        <div style="margin-top:6px;font-size:13px;color:#555;">
+          📍 Coordenadas: ${p.lat}, ${p.lng}
+          <button class="btn-navegar-urgente" data-id="${p.id}" style="margin-left:12px;background:#1a73e8;color:white;border:none;padding:4px 12px;border-radius:12px;cursor:pointer;font-weight:bold;">🧭 Navegar</button>
+        </div>
+        ${modoAdmin ? `<div style="margin-top:6px;font-size:12px;color:#777;">👤 Registrado por: ${p.informacion?.nombre_registrador || 'Anónimo'} (${p.informacion?.rol_registrador || 'Sin rol'})</div>` : ''}
+      </div>
+    `;
+  });
+
+  contenedor.innerHTML = html;
+
+  document.querySelectorAll('.btn-navegar-urgente').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const id = this.dataset.id;
+      cerrarLista();
+      document.getElementById('panelUrgencias').style.display = 'none';
+      iniciarNavegacion(id);
+    });
+  });
+}
+
+// --- GEOCODIFICACIÓN INVERSA (auto-completar dirección) ---
+function obtenerDireccionDesdeCoordenadas(lat, lng) {
+  const campoDireccion = document.getElementById('campo_direccion');
+  if (!campoDireccion) return;
+
+  campoDireccion.placeholder = '🔄 Obteniendo dirección...';
+  campoDireccion.value = '';
+
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&countrycodes=ve`;
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.display_name) {
+          const address = data.address || {};
+          const partes = [];
+          if (address.road) partes.push(address.road);
+          else if (address.pedestrian) partes.push(address.pedestrian);
+          if (address.neighbourhood) partes.push(address.neighbourhood);
+          else if (address.suburb) partes.push(address.suburb);
+          if (address.city || address.town || address.village) {
+            partes.push(address.city || address.town || address.village);
+          }
+          if (address.state) partes.push(address.state);
+          const direccionCompleta = partes.length > 0 ? partes.join(', ') : data.display_name;
+          campoDireccion.value = direccionCompleta;
+          campoDireccion.placeholder = 'Dirección (automática)';
+        } else {
+          campoDireccion.placeholder = 'No se pudo obtener dirección';
+        }
+      })
+      .catch(() => {
+        campoDireccion.placeholder = 'Error al obtener dirección (escribe manual)';
+      });
+  } catch (e) {
+    campoDireccion.placeholder = 'Error al obtener dirección (escribe manual)';
+  }
+}
 // ============================================================
-// BLOQUE 3: ADMIN, GEOLOCALIZACIÓN, SELECCIÓN, MENÚ, EVENTOS
+// BLOQUE 3: ADMIN, GEOLOCALIZACIÓN, SELECCIÓN, MENÚ, GUARDADO, SEGURIDAD
 // ============================================================
 
+// --- ADMIN Y GEOLOCALIZACIÓN ---
+function getAdminPassword() {
+  const stored = localStorage.getItem('adminPassword');
+  return stored || ADMIN_PASSWORD;
+}
+
+function setAdminPassword(newPassword) {
+  localStorage.setItem('adminPassword', newPassword);
+}
+
+function getContactoEmergencia() {
+  return localStorage.getItem('contactoEmergencia') || 'No configurado';
+}
+
+function setContactoEmergencia(contacto) {
+  localStorage.setItem('contactoEmergencia', contacto);
+}
+
 function marcarRecogido(id) {
+  const pass = prompt('🔐 Ingresa la contraseña de administrador para marcar como recogido:');
+  if (pass !== getAdminPassword()) {
+    alert('❌ Contraseña incorrecta.');
+    return;
+  }
   const punto = todosLosPuntos.find(p => p.id === id);
   if (!punto || punto.tipo !== 'edificio_caido' || punto.informacion.recogido) return;
   punto.informacion.recogido = true;
+  punto.informacion.fecha_edicion = new Date().toLocaleString();
   guardarPuntos();
   aplicarFiltros();
   alert('✅ Edificio marcado como recogido y limpiado. ¡Gracias!');
 }
 
 function eliminarPunto(id) {
-  if (!modoAdmin) return alert('🔐 Solo el administrador puede eliminar puntos.');
+  const pass = prompt('🔐 Ingresa la contraseña de administrador para eliminar este punto:');
+  if (pass !== getAdminPassword()) {
+    alert('❌ Contraseña incorrecta.');
+    return;
+  }
   if (!confirm('¿Seguro que quieres eliminar este punto de forma permanente?')) return;
   todosLosPuntos = todosLosPuntos.filter(p => p.id !== id);
   guardarPuntos();
@@ -707,6 +930,7 @@ function calcularDistancia(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// --- SELECCIÓN EN EL MAPA ---
 function activarSeleccion() {
   map.getContainer().style.cursor = 'crosshair';
   map.on('click', onMapClick);
@@ -736,11 +960,15 @@ function onMapClick(e) {
   map.off('click', onMapClick);
   map.getContainer().style.cursor = '';
   mostrarFormulario(tipoSeleccionado);
+  obtenerDireccionDesdeCoordenadas(lat, lng);
 }
 
+// --- MENÚ Y FORMULARIO ---
 const menuOpciones = document.getElementById('menuOpciones');
 const btnAgregar = document.getElementById('btnAgregar');
 const btnAdmin = document.getElementById('btnAdmin');
+const btnChat = document.getElementById('btnChat');
+const btnSeguridad = document.getElementById('btnSeguridad');
 const formulario = document.getElementById('formulario');
 const formTitulo = document.getElementById('formTitulo');
 const camposDinamicos = document.getElementById('camposDinamicos');
@@ -758,13 +986,16 @@ document.addEventListener('click', function() { menuOpciones.style.display = 'no
 
 btnAdmin.addEventListener('click', function() {
   const pass = prompt('Ingresa la contraseña de administrador:');
-  if (pass === ADMIN_PASSWORD) {
+  const currentPassword = getAdminPassword();
+  if (pass === currentPassword) {
     modoAdmin = true;
     btnAdmin.textContent = '🔓 Administrador activo';
     btnAdmin.style.background = '#2e7d32';
+    btnChat.style.display = 'block';
+    btnSeguridad.style.display = 'block';
     document.getElementById('btnEliminar').style.display = 'block';
     aplicarFiltros();
-    alert('🔓 Modo administrador activado. Ahora puedes eliminar y editar puntos desde sus popups.');
+    alert('🔓 Modo administrador activado.');
   } else {
     alert('❌ Contraseña incorrecta.');
   }
@@ -809,8 +1040,12 @@ function mostrarFormulario(tipo) {
   formulario.style.display = 'block';
   btnEliminar.style.display = 'none';
   puntoEnEdicion = null;
+  if (ubicacionSeleccionada) {
+    obtenerDireccionDesdeCoordenadas(ubicacionSeleccionada.lat, ubicacionSeleccionada.lng);
+  }
 }
 
+// --- GUARDAR ---
 btnGuardar.addEventListener('click', function() {
   if (!tipoSeleccionado) { alert('Selecciona un tipo primero'); return; }
   if (!ubicacionSeleccionada) { alert('Toca el mapa para seleccionar ubicación'); return; }
@@ -829,6 +1064,8 @@ btnGuardar.addEventListener('click', function() {
 
   const informacion = config.procesar(datos);
   informacion.direccion = datos.direccion || '';
+  informacion.fecha_creacion = new Date().toLocaleString();
+  informacion.fecha_edicion = informacion.fecha_creacion;
 
   const nuevoPunto = {
     id: Date.now().toString(),
@@ -848,6 +1085,7 @@ btnGuardar.addEventListener('click', function() {
   aplicarFiltros();
 });
 
+// --- CANCELAR ---
 btnCancelar.addEventListener('click', function() {
   const btnRegistro = document.getElementById('btnRegistrarVoluntario');
   if (btnRegistro) {
@@ -874,6 +1112,7 @@ btnCancelar.addEventListener('click', function() {
   ubicacionSeleccionada = null;
 });
 
+// --- BUSCADOR ---
 document.getElementById('btnBuscar').addEventListener('click', async function() {
   const query = document.getElementById('buscador').value.trim();
   if (!query) return;
@@ -894,6 +1133,7 @@ document.getElementById('buscador').addEventListener('keypress', function(e) {
   if (e.key === 'Enter') document.getElementById('btnBuscar').click();
 });
 
+// --- FILTROS ---
 document.querySelectorAll('#filtros .filtro-btn').forEach(btn => {
   btn.addEventListener('click', function() {
     document.querySelectorAll('#filtros .filtro-btn').forEach(b => b.classList.remove('activo'));
@@ -903,7 +1143,7 @@ document.querySelectorAll('#filtros .filtro-btn').forEach(btn => {
   });
 });
 
-// Eventos de lista
+// --- EVENTOS DE PANELES ---
 document.getElementById('btnVerLista').addEventListener('click', function() {
   mostrarListaPuntos();
 });
@@ -913,27 +1153,121 @@ document.getElementById('btnCerrarLista').addEventListener('click', function() {
 document.getElementById('btnCerrarDetalle').addEventListener('click', function() {
   document.getElementById('panelDetalle').style.display = 'none';
 });
+document.getElementById('btnUrgencias').addEventListener('click', function() {
+  mostrarUrgencias();
+});
+document.getElementById('btnCerrarUrgencias').addEventListener('click', function() {
+  document.getElementById('panelUrgencias').style.display = 'none';
+});
+
+// --- SEGURIDAD: CONTRASEÑA MAESTRA Y CAMBIO DE CLAVE ---
+function generarPassword() {
+  const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let password = '';
+  for (let i = 0; i < 7; i++) {
+    const indice = Math.floor(Math.random() * caracteres.length);
+    password += caracteres.charAt(indice);
+  }
+  return password;
+}
+
+function mostrarPanelSeguridad() {
+  if (!modoAdmin) {
+    alert('🔐 Solo el administrador puede acceder a esta sección.');
+    return;
+  }
+  document.getElementById('panelSeguridad').style.display = 'block';
+  document.getElementById('displayContacto').textContent = getContactoEmergencia();
+}
+
+document.getElementById('btnSeguridad').addEventListener('click', function() {
+  mostrarPanelSeguridad();
+});
+
+document.getElementById('btnGenerarPassword').addEventListener('click', function() {
+  const nueva = generarPassword();
+  document.getElementById('inputNuevaPassword').value = nueva;
+  document.getElementById('inputConfirmPassword').value = nueva;
+  alert(`🔑 Contraseña generada: ${nueva}\n\nPuedes usarla o cambiarla manualmente.`);
+});
+
+document.getElementById('btnCambiarPassword').addEventListener('click', function() {
+  const master = document.getElementById('inputMasterPassword').value.trim();
+  const nueva = document.getElementById('inputNuevaPassword').value.trim();
+  const confirm = document.getElementById('inputConfirmPassword').value.trim();
+
+  if (master !== MASTER_PASSWORD) {
+    alert('❌ Contraseña maestra incorrecta. Intenta de nuevo.');
+    return;
+  }
+  if (nueva.length !== 7) {
+    alert('❌ La nueva contraseña debe tener exactamente 7 caracteres alfanuméricos.');
+    return;
+  }
+  if (!/^[A-Za-z0-9]+$/.test(nueva)) {
+    alert('❌ La nueva contraseña solo puede contener letras y números.');
+    return;
+  }
+  if (nueva !== confirm) {
+    alert('❌ Las contraseñas no coinciden.');
+    return;
+  }
+
+  setAdminPassword(nueva);
+  alert(`✅ Contraseña cambiada exitosamente.\n\nNueva contraseña: ${nueva}\n\n📞 Notifica a los administradores usando el número de contacto: ${getContactoEmergencia()}\n\n💡 Recomendación: Usa la contraseña generada por el sistema para mayor seguridad.`);
+  document.getElementById('panelSeguridad').style.display = 'none';
+  document.getElementById('inputMasterPassword').value = '';
+  document.getElementById('inputNuevaPassword').value = '';
+  document.getElementById('inputConfirmPassword').value = '';
+});
+
+document.getElementById('btnEditarContacto').addEventListener('click', function() {
+  const actual = getContactoEmergencia();
+  const nuevo = prompt('📞 Ingresa el número de contacto para emergencias (ej: +58 412 1234567):', actual);
+  if (nuevo !== null) {
+    setContactoEmergencia(nuevo);
+    document.getElementById('displayContacto').textContent = nuevo;
+    alert('✅ Número de contacto actualizado.');
+  }
+});
+
+document.getElementById('btnCerrarSeguridad').addEventListener('click', function() {
+  document.getElementById('panelSeguridad').style.display = 'none';
+});
 // ============================================================
-// BLOQUE 4: VOLUNTARIADO, NAVEGACIÓN, EDICIÓN DE PUNTOS
+// BLOQUE 4: VOLUNTARIADO INFANTIL, NAVEGACIÓN, EDICIÓN
 // ============================================================
 
+// --- VOLUNTARIADO INFANTIL ---
 function mostrarFormularioVoluntarioInfantil(puntoId) {
   const punto = todosLosPuntos.find(p => p.id === puntoId);
   if (!punto) return;
 
   const html = `
     <h3 style="color:#FF6F00;">🧸 Ofrecerse como voluntario</h3>
+    <div style="background:#ffebee;padding:12px;border-radius:8px;border-left:4px solid #d32f2f;margin-bottom:12px;color:#d32f2f;font-weight:bold;font-size:14px;">
+      🛡️ ¡ATENCIÓN!<br>
+      Los niños y niñas son lo más importante. Para garantizar su bienestar, todos los voluntarios deben <strong>completar todos los campos obligatorios</strong> con información verídica.<br>
+      <strong>Tu identidad será verificada por los administradores</strong> antes de que puedas interactuar con los menores.<br>
+      Si no completas todos los datos, <strong>no podrás ser aceptado</strong> como voluntario.
+    </div>
     <p style="font-size:14px;color:#555;margin-bottom:12px;">
       Para garantizar la seguridad de los niños, completa todos los campos obligatorios.
     </p>
-    <label>Nombre completo (2 nombres y 2 apellidos) *</label>
-    <input type="text" id="v_nombre" required />
+    <label>Primer nombre *</label>
+    <input type="text" id="v_nombre1" placeholder="Ej: Juan" required />
+    <label>Segundo nombre</label>
+    <input type="text" id="v_nombre2" placeholder="Ej: Carlos" />
+    <label>Primer apellido *</label>
+    <input type="text" id="v_apellido1" placeholder="Ej: Pérez" required />
+    <label>Segundo apellido</label>
+    <input type="text" id="v_apellido2" placeholder="Ej: García" />
     <label>Número de cédula *</label>
     <input type="text" id="v_cedula" required />
-    <label>Enlace a foto de la cédula (URL) *</label>
-    <input type="text" id="v_foto_cedula" placeholder="https://..." required />
-    <label>Enlace a foto actualizada (URL) *</label>
-    <input type="text" id="v_foto_personal" placeholder="https://..." required />
+    <label>Foto de la cédula (toca para cargar)</label>
+    <input type="file" id="v_foto_cedula" accept="image/*" capture="environment" />
+    <label>Foto actualizada (toca para cargar)</label>
+    <input type="file" id="v_foto_personal" accept="image/*" capture="environment" />
     <label>Teléfono de contacto</label>
     <input type="text" id="v_telefono" />
     <label>Rol (recreador, cuidador, voluntario, etc.)</label>
@@ -956,23 +1290,40 @@ function mostrarFormularioVoluntarioInfantil(puntoId) {
   btnCancelar.style.display = 'none';
 
   document.getElementById('btnRegistrarVoluntario').addEventListener('click', function() {
-    const nombre = document.getElementById('v_nombre').value.trim();
+    const nombre1 = document.getElementById('v_nombre1').value.trim();
+    const nombre2 = document.getElementById('v_nombre2').value.trim();
+    const apellido1 = document.getElementById('v_apellido1').value.trim();
+    const apellido2 = document.getElementById('v_apellido2').value.trim();
     const cedula = document.getElementById('v_cedula').value.trim();
-    const foto_cedula = document.getElementById('v_foto_cedula').value.trim();
-    const foto_personal = document.getElementById('v_foto_personal').value.trim();
     const telefono = document.getElementById('v_telefono').value.trim();
     const rol = document.getElementById('v_rol').value.trim() || 'Voluntario';
     const mensaje = document.getElementById('v_mensaje').value.trim() || 'Estamos aquí para cuidarte y protegerte.';
 
-    if (!nombre || !cedula || !foto_cedula || !foto_personal) {
-      alert('❌ Todos los campos con * son obligatorios');
+    const fotoCedulaInput = document.getElementById('v_foto_cedula');
+    const fotoPersonalInput = document.getElementById('v_foto_personal');
+    const fotoCedula = fotoCedulaInput.files && fotoCedulaInput.files.length > 0 ? URL.createObjectURL(fotoCedulaInput.files[0]) : '';
+    const fotoPersonal = fotoPersonalInput.files && fotoPersonalInput.files.length > 0 ? URL.createObjectURL(fotoPersonalInput.files[0]) : '';
+
+    if (!nombre1 || !apellido1 || !cedula) {
+      alert('❌ Los campos con * son obligatorios');
       return;
     }
+
+    const nombreCompleto = [nombre1, nombre2, apellido1, apellido2].filter(Boolean).join(' ');
 
     const punto = todosLosPuntos.find(p => p.id === puntoId);
     if (!punto) return;
     if (!punto.informacion.voluntarios_infantiles) punto.informacion.voluntarios_infantiles = [];
-    punto.informacion.voluntarios_infantiles.push({ nombre, cedula, foto_cedula, foto_personal, telefono, rol, mensaje });
+    punto.informacion.voluntarios_infantiles.push({
+      nombre: nombreCompleto,
+      cedula,
+      foto_cedula: fotoCedula,
+      foto_personal: fotoPersonal,
+      telefono,
+      rol,
+      mensaje
+    });
+    punto.informacion.fecha_edicion = new Date().toLocaleString();
     guardarPuntos();
     alert('✅ Te has registrado como voluntario para actividades infantiles. ¡Gracias por tu ayuda!');
     formulario.style.display = 'none';
@@ -988,6 +1339,7 @@ function mostrarFormularioVoluntarioInfantil(puntoId) {
   });
 }
 
+// --- NAVEGACIÓN ---
 function iniciarNavegacion(puntoId) {
   const punto = todosLosPuntos.find(p => p.id === puntoId);
   if (!punto) return alert('Punto no encontrado');
@@ -1033,7 +1385,7 @@ function trazarRuta(origen, destino, nombreDestino) {
     }),
     createMarker: function() { return null; },
     fitSelectedRoutes: true,
-    show: false, // Ocultar panel de instrucciones
+    show: false,
     collapsible: true
   }).addTo(map);
 
@@ -1056,6 +1408,7 @@ function cancelarNavegacion() {
   alert('🧭 Navegación cancelada');
 }
 
+// --- EDICIÓN DE PUNTOS ---
 function mostrarFormularioEdicionPunto(puntoId) {
   const punto = todosLosPuntos.find(p => p.id === puntoId);
   if (!punto) { alert('❌ Punto no encontrado'); return; }
@@ -1151,7 +1504,7 @@ function mostrarFormularioEdicionPunto(puntoId) {
     if (datosEditados.nombre) {
       punto.nombre = datosEditados.nombre;
     }
-
+    punto.informacion.fecha_edicion = new Date().toLocaleString();
     guardarPuntos();
     alert('✅ Punto actualizado exitosamente');
     formulario.style.display = 'none';
@@ -1167,19 +1520,19 @@ function mostrarFormularioEdicionPunto(puntoId) {
   });
 }
 // ============================================================
-// BLOQUE 5: TRANSPORTE DE SUMINISTROS E INICIALIZACIÓN
+// BLOQUE 5: TRANSPORTE DE SUMINISTROS CON APROBACIÓN TRIPLE
 // ============================================================
 
 function mostrarFormularioCrearEnvio(puntoId) {
   const punto = todosLosPuntos.find(p => p.id === puntoId);
   if (!punto || punto.tipo !== 'centro_acopio') return;
 
-  const destinos = todosLosPuntos.filter(p => 
+  const destinos = todosLosPuntos.filter(p =>
     p.id !== puntoId && ['refugio', 'hospital', 'centro_acopio', 'veterinaria'].includes(p.tipo)
   );
 
   if (destinos.length === 0) {
-    alert('⚠️ No hay puntos de destino disponibles para enviar suministros. Agrega refugios u hospitales primero.');
+    alert('⚠️ No hay puntos de destino disponibles.');
     return;
   }
 
@@ -1195,22 +1548,14 @@ function mostrarFormularioCrearEnvio(puntoId) {
   html += `</select>`;
 
   html += `
-    <label>Contenido del envío (ej: 50 raciones de comida, 30 litros de agua) *</label>
-    <input type="text" id="envio_contenido" placeholder="Descripción detallada del contenido" required />
-    <label>Tipo de vehículo</label>
-    <select id="envio_vehiculo">
-      <option value="Camión">Camión</option>
-      <option value="Pickup">Pickup</option>
-      <option value="Furgoneta">Furgoneta</option>
-      <option value="Motocicleta">Motocicleta</option>
-      <option value="Bicicleta">Bicicleta</option>
-    </select>
-    <label>Conductor (nombre y cédula)</label>
-    <input type="text" id="envio_conductor" placeholder="Nombre completo y cédula del conductor" />
+    <label>Contenido del envío *</label>
+    <input type="text" id="envio_contenido" placeholder="Ej: 50 raciones de comida, 30 litros de agua" required />
+    <label>Código de verificación (4-6 dígitos/letras) *</label>
+    <input type="text" id="envio_codigo" placeholder="Ej: ABC123" required />
     <label>Observaciones adicionales</label>
-    <textarea id="envio_observaciones" rows="2" placeholder="Instrucciones especiales, contacto, etc."></textarea>
+    <textarea id="envio_observaciones" rows="2" placeholder="Instrucciones especiales"></textarea>
     <button id="btnCrearEnvio" data-id="${puntoId}" style="margin-top:12px;background:#F57C00;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">
-      📦 Crear envío
+      📦 Crear envío y generar enlace
     </button>
     <button id="btnCancelarEnvio" style="margin-top:6px;background:#666;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">
       ❌ Cancelar
@@ -1227,26 +1572,28 @@ function mostrarFormularioCrearEnvio(puntoId) {
   document.getElementById('btnCrearEnvio').addEventListener('click', function() {
     const destinoId = document.getElementById('envio_destino').value;
     const contenido = document.getElementById('envio_contenido').value.trim();
-    const vehiculo = document.getElementById('envio_vehiculo').value;
-    const conductor = document.getElementById('envio_conductor').value.trim();
+    const codigo = document.getElementById('envio_codigo').value.trim().toUpperCase();
     const observaciones = document.getElementById('envio_observaciones').value.trim();
 
-    if (!destinoId) { alert('❌ Debes seleccionar un destino'); return; }
-    if (!contenido) { alert('❌ Debes describir el contenido del envío'); return; }
+    if (!destinoId) { alert('❌ Selecciona un destino'); return; }
+    if (!contenido) { alert('❌ Describe el contenido'); return; }
+    if (!codigo || codigo.length < 3) { alert('❌ El código de verificación debe tener al menos 3 caracteres'); return; }
 
     const destino = todosLosPuntos.find(p => p.id === destinoId);
     if (!destino) { alert('❌ Destino no encontrado'); return; }
     const origen = punto;
 
+    const envioId = Date.now().toString();
+    const enlaceUnico = `${window.location.origin}/?envio=${envioId}`;
+
     const nuevoEnvio = {
-      id: Date.now().toString(),
+      id: envioId,
+      codigo: codigo,
       origenId: origen.id,
       destinoId: destino.id,
       origenNombre: origen.nombre,
       destinoNombre: destino.nombre,
       contenido: contenido,
-      vehiculo: vehiculo,
-      conductor: conductor || 'No especificado',
       observaciones: observaciones || 'Sin observaciones',
       estado: 'pendiente',
       ubicacionActual: { lat: origen.lat, lng: origen.lng },
@@ -1254,7 +1601,12 @@ function mostrarFormularioCrearEnvio(puntoId) {
       destinoLng: destino.lng,
       incidencias: [],
       fechaCreacion: new Date().toLocaleString(),
-      fechaEntrega: null
+      fechaEntrega: null,
+      enlace: enlaceUnico,
+      aprobacionOrigen: null,
+      aprobacionConductor: null,
+      aprobacionDestino: null,
+      conductor: null
     };
 
     if (!punto.informacion.envios) punto.informacion.envios = [];
@@ -1262,7 +1614,8 @@ function mostrarFormularioCrearEnvio(puntoId) {
     guardarPuntos();
     agregarMarcadorEnvio(nuevoEnvio);
 
-    alert('✅ Envío creado exitosamente. El marcador aparecerá en el mapa.');
+    alert(`✅ Envío creado. Comparte este enlace:\n\n${enlaceUnico}\n\nCódigo de verificación: ${codigo}\n\nEl conductor, el origen y el destino deben usar este enlace para aprobar.`);
+
     formulario.style.display = 'none';
     btnGuardar.style.display = 'block';
     btnCancelar.style.display = 'block';
@@ -1283,57 +1636,113 @@ function agregarMarcadorEnvio(envio) {
     className: 'envio-marker'
   });
 
+  const aprobadoOrigen = envio.aprobacionOrigen ? '✅' : '⏳';
+  const aprobadoConductor = envio.aprobacionConductor ? '✅' : '⏳';
+  const aprobadoDestino = envio.aprobacionDestino ? '✅' : '⏳';
+  const aprobacionesTexto = `Origen: ${aprobadoOrigen} | Conductor: ${aprobadoConductor} | Destino: ${aprobadoDestino}`;
+
   let popupContent = `
     <div class="popup-tipo">🚚 Envío de suministros</div>
     <strong>${envio.contenido}</strong><br>
     📍 Desde: ${envio.origenNombre}<br>
     📍 Hacia: ${envio.destinoNombre}<br>
-    🚗 Vehículo: ${envio.vehiculo}<br>
-    👤 Conductor: ${envio.conductor}<br>
+    🔑 Código: ${envio.codigo}<br>
     📊 Estado: <strong style="color:${envio.estado === 'entregado' ? '#2e7d32' : envio.estado === 'incidencia' ? '#d32f2f' : '#F57C00'};">${envio.estado}</strong><br>
+    📋 Aprobaciones: ${aprobacionesTexto}<br>
     📅 Creado: ${envio.fechaCreacion}
+    ${envio.conductor ? `<br>👤 Conductor: ${envio.conductor.nombre} (${envio.conductor.cedula})` : ''}
+    ${envio.conductor ? `<br>📞 Teléfono: ${envio.conductor.telefono}` : ''}
   `;
 
   if (envio.incidencias && envio.incidencias.length > 0) {
-    popupContent += `<div class="popup-seccion"><strong>⚠️ Incidencias reportadas:</strong><ul class="popup-lista">`;
+    popupContent += `<div class="popup-seccion"><strong>⚠️ Incidencias:</strong><ul class="popup-lista">`;
     envio.incidencias.forEach(inc => {
-      const resuelto = inc.resuelto ? '✅ Resuelta' : '⏳ Pendiente';
-      popupContent += `<li><strong>${inc.fecha}</strong><br>${inc.titulo}<br><em>${inc.descripcion}</em><br>${resuelto}</li>`;
+      const resuelto = inc.resuelto ? '✅' : '⏳';
+      popupContent += `<li><strong>${inc.fecha}</strong> ${inc.titulo} - ${resuelto}</li>`;
     });
     popupContent += `</ul></div>`;
   }
 
-  if (modoAdmin || envio.estado !== 'entregado') {
+  if (envio.estado !== 'entregado') {
     popupContent += `
-      <button class="btn-reportar-incidencia" data-envio-id="${envio.id}" style="margin-top:8px;background:#d32f2f;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
-        ⚠️ Reportar incidencia
-      </button>
+      <div style="margin-top:8px;background:#f0f0f0;padding:6px;border-radius:4px;font-size:12px;">
+        🔗 Enlace: <a href="${envio.enlace}" target="_blank">${envio.enlace}</a>
+        <button class="btn-copiar-enlace" data-enlace="${envio.enlace}" style="background:#1a73e8;color:white;border:none;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:11px;margin-left:4px;">📋 Copiar</button>
+      </div>
     `;
-    if (envio.estado === 'pendiente' || envio.estado === 'en_ruta') {
+    if (!envio.aprobacionOrigen && envio.estado === 'pendiente') {
       popupContent += `
-        <button class="btn-marcar-entregado" data-envio-id="${envio.id}" style="margin-top:4px;background:#2e7d32;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
-          ✅ Marcar como entregado
+        <button class="btn-aprobar-origen" data-envio-id="${envio.id}" style="margin-top:8px;background:#F57C00;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
+          📦 Aprobar salida (Origen)
         </button>
       `;
     }
+    if (envio.aprobacionOrigen && !envio.aprobacionConductor && envio.estado === 'origen_aprobado') {
+      popupContent += `
+        <button class="btn-conductor" data-envio-id="${envio.id}" style="margin-top:8px;background:#1a73e8;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
+          🚚 Aceptar envío (Conductor)
+        </button>
+      `;
+    }
+    if (envio.aprobacionConductor && !envio.aprobacionDestino && envio.estado === 'en_ruta') {
+      popupContent += `
+        <button class="btn-aprobar-destino" data-envio-id="${envio.id}" style="margin-top:8px;background:#2e7d32;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
+          ✅ Confirmar recepción (Destino)
+        </button>
+      `;
+    }
+    if (envio.estado !== 'entregado' && envio.estado !== 'incidencia') {
+      popupContent += `
+        <button class="btn-reportar-incidencia" data-envio-id="${envio.id}" style="margin-top:4px;background:#d32f2f;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
+          ⚠️ Reportar incidencia
+        </button>
+      `;
+    }
+  } else {
+    popupContent += `<div style="margin-top:8px;background:#e0e0e0;padding:6px;border-radius:6px;text-align:center;color:#333;">✅ Envío completado con todas las aprobaciones</div>`;
   }
 
   const marker = L.marker([envio.ubicacionActual.lat, envio.ubicacionActual.lng], { icon })
     .bindPopup(popupContent, { maxWidth: 350, className: 'popup-detalle' });
 
   marker.on('popupopen', function() {
+    const btnCopiar = document.querySelector(`.btn-copiar-enlace[data-enlace="${envio.enlace}"]`);
+    if (btnCopiar) {
+      btnCopiar.addEventListener('click', function(e) {
+        e.stopPropagation();
+        navigator.clipboard.writeText(envio.enlace).then(() => {
+          alert('📋 Enlace copiado');
+        }).catch(() => {
+          alert('📋 Copia manual: ' + envio.enlace);
+        });
+      });
+    }
+    const btnOrigen = document.querySelector(`.btn-aprobar-origen[data-envio-id="${envio.id}"]`);
+    if (btnOrigen) {
+      btnOrigen.addEventListener('click', function(e) {
+        e.stopPropagation();
+        mostrarAprobacionOrigen(envio.id);
+      });
+    }
+    const btnConductor = document.querySelector(`.btn-conductor[data-envio-id="${envio.id}"]`);
+    if (btnConductor) {
+      btnConductor.addEventListener('click', function(e) {
+        e.stopPropagation();
+        mostrarFormularioConductor(envio.id);
+      });
+    }
+    const btnDestino = document.querySelector(`.btn-aprobar-destino[data-envio-id="${envio.id}"]`);
+    if (btnDestino) {
+      btnDestino.addEventListener('click', function(e) {
+        e.stopPropagation();
+        mostrarAprobacionDestino(envio.id);
+      });
+    }
     const btnIncidencia = document.querySelector(`.btn-reportar-incidencia[data-envio-id="${envio.id}"]`);
     if (btnIncidencia) {
       btnIncidencia.addEventListener('click', function(e) {
         e.stopPropagation();
         reportarIncidencia(envio.id);
-      });
-    }
-    const btnEntregado = document.querySelector(`.btn-marcar-entregado[data-envio-id="${envio.id}"]`);
-    if (btnEntregado) {
-      btnEntregado.addEventListener('click', function(e) {
-        e.stopPropagation();
-        marcarEnvioEntregado(envio.id);
       });
     }
   });
@@ -1342,31 +1751,151 @@ function agregarMarcadorEnvio(envio) {
   markersLayer.addLayer(marker);
 }
 
-function reportarIncidencia(envioId) {
-  let envioEncontrado = null;
-  let puntoPadre = null;
+// --- FUNCIONES DE APROBACIÓN ---
+function buscarEnvio(envioId) {
   for (const punto of todosLosPuntos) {
     if (punto.informacion?.envios) {
       const encontrado = punto.informacion.envios.find(e => e.id === envioId);
-      if (encontrado) {
-        envioEncontrado = encontrado;
-        puntoPadre = punto;
-        break;
-      }
+      if (encontrado) return encontrado;
     }
   }
+  return null;
+}
 
-  if (!envioEncontrado) { alert('❌ Envío no encontrado'); return; }
+function actualizarMarcadorEnvio(envio) {
+  if (envio._marker) {
+    markersLayer.removeLayer(envio._marker);
+    envio._marker = null;
+    agregarMarcadorEnvio(envio);
+  }
+}
+
+function mostrarAprobacionOrigen(envioId) {
+  const envio = buscarEnvio(envioId);
+  if (!envio) { alert('❌ Envío no encontrado'); return; }
+  if (envio.aprobacionOrigen) { alert('✅ El origen ya aprobó este envío'); return; }
+  if (envio.estado !== 'pendiente') { alert('⏳ Este envío ya no está pendiente de aprobación del origen'); return; }
+
+  const panel = document.getElementById('panelAprobacionOrigen');
+  panel.style.display = 'block';
+  document.getElementById('a_nombre_origen').value = '';
+  document.getElementById('a_rol_origen').value = 'Coordinador';
+  document.getElementById('a_codigo_origen').value = '';
+
+  document.getElementById('btnAprobarOrigen').onclick = function() {
+    const nombre = document.getElementById('a_nombre_origen').value.trim();
+    const rol = document.getElementById('a_rol_origen').value;
+    const codigo = document.getElementById('a_codigo_origen').value.trim().toUpperCase();
+
+    if (!nombre) { alert('❌ Ingresa tu nombre'); return; }
+    if (!codigo) { alert('❌ Ingresa el código de verificación'); return; }
+    if (codigo !== envio.codigo) { alert('❌ Código incorrecto. El código correcto es: ' + envio.codigo); return; }
+
+    envio.aprobacionOrigen = { nombre, rol, fecha: new Date().toLocaleString() };
+    envio.estado = 'origen_aprobado';
+    guardarPuntos();
+    actualizarMarcadorEnvio(envio);
+    panel.style.display = 'none';
+    alert('✅ Salida aprobada por el origen. El envío está listo para el conductor.');
+    aplicarFiltros();
+  };
+
+  document.getElementById('btnCancelarAprobacionOrigen').onclick = function() {
+    panel.style.display = 'none';
+  };
+}
+
+function mostrarAprobacionDestino(envioId) {
+  const envio = buscarEnvio(envioId);
+  if (!envio) { alert('❌ Envío no encontrado'); return; }
+  if (envio.aprobacionDestino) { alert('✅ El destino ya aprobó este envío'); return; }
+  if (envio.estado !== 'en_ruta') { alert('⏳ El envío debe estar en ruta para confirmar recepción'); return; }
+
+  const panel = document.getElementById('panelAprobacionDestino');
+  panel.style.display = 'block';
+  document.getElementById('a_nombre_destino').value = '';
+  document.getElementById('a_rol_destino').value = 'Coordinador';
+  document.getElementById('a_codigo_destino').value = '';
+  document.getElementById('a_estado_destino').value = 'correcto';
+
+  document.getElementById('btnAprobarDestino').onclick = function() {
+    const nombre = document.getElementById('a_nombre_destino').value.trim();
+    const rol = document.getElementById('a_rol_destino').value;
+    const codigo = document.getElementById('a_codigo_destino').value.trim().toUpperCase();
+    const estado = document.getElementById('a_estado_destino').value;
+
+    if (!nombre) { alert('❌ Ingresa tu nombre'); return; }
+    if (!codigo) { alert('❌ Ingresa el código de verificación'); return; }
+    if (codigo !== envio.codigo) { alert('❌ Código incorrecto'); return; }
+
+    envio.aprobacionDestino = { nombre, rol, estado, fecha: new Date().toLocaleString() };
+    envio.estado = 'entregado';
+    envio.fechaEntrega = new Date().toLocaleString();
+    envio.ubicacionActual = { lat: envio.destinoLat, lng: envio.destinoLng };
+    guardarPuntos();
+    actualizarMarcadorEnvio(envio);
+    panel.style.display = 'none';
+    alert('✅ Recepción confirmada por el destino. ¡Envío completado!');
+    aplicarFiltros();
+  };
+
+  document.getElementById('btnCancelarAprobacionDestino').onclick = function() {
+    panel.style.display = 'none';
+  };
+}
+
+function mostrarFormularioConductor(envioId) {
+  const envio = buscarEnvio(envioId);
+  if (!envio) { alert('❌ Envío no encontrado'); return; }
+  if (envio.aprobacionConductor) { alert('✅ Ya hay un conductor asignado'); return; }
+  if (envio.estado !== 'origen_aprobado') { alert('⏳ El origen debe aprobar primero la salida'); return; }
+
+  const panelConductor = document.getElementById('formularioConductor');
+  panelConductor.style.display = 'block';
+  document.getElementById('c_nombre').value = '';
+  document.getElementById('c_cedula').value = '';
+  document.getElementById('c_telefono').value = '';
+  document.getElementById('c_vehiculo').value = 'Camión';
+
+  document.getElementById('btnAceptarEnvio').onclick = function() {
+    const nombre = document.getElementById('c_nombre').value.trim();
+    const cedula = document.getElementById('c_cedula').value.trim();
+    const telefono = document.getElementById('c_telefono').value.trim();
+    const vehiculo = document.getElementById('c_vehiculo').value;
+
+    if (!nombre || !cedula || !telefono) {
+      alert('❌ Todos los campos son obligatorios.');
+      return;
+    }
+
+    envio.conductor = { nombre, cedula, telefono, vehiculo };
+    envio.aprobacionConductor = { nombre, cedula, telefono, vehiculo, fecha: new Date().toLocaleString() };
+    envio.estado = 'en_ruta';
+    guardarPuntos();
+    actualizarMarcadorEnvio(envio);
+    panelConductor.style.display = 'none';
+    alert('✅ Envío aceptado. El conductor está en ruta.');
+    aplicarFiltros();
+  };
+
+  document.getElementById('btnCancelarConductor').onclick = function() {
+    panelConductor.style.display = 'none';
+  };
+}
+
+function reportarIncidencia(envioId) {
+  const envio = buscarEnvio(envioId);
+  if (!envio) { alert('❌ Envío no encontrado'); return; }
 
   const html = `
     <h3 style="color:#d32f2f;">⚠️ Reportar incidencia</h3>
     <p style="font-size:14px;color:#555;margin-bottom:12px;">
-      Describe detalladamente lo que ocurrió durante el transporte de suministros.
+      Describe detalladamente lo que ocurrió durante el transporte.
     </p>
-    <label>Título de la incidencia *</label>
+    <label>Título *</label>
     <input type="text" id="inc_titulo" placeholder="Ej: Accidente en la vía" required />
     <label>Descripción detallada *</label>
-    <textarea id="inc_descripcion" rows="4" placeholder="Describe con detalle lo que pasó: lugar, hora, personas involucradas, daños, etc." required></textarea>
+    <textarea id="inc_descripcion" rows="4" placeholder="Describe con detalle lo que pasó" required></textarea>
     <label>¿Requiere asistencia?</label>
     <select id="inc_asistencia">
       <option value="no">No</option>
@@ -1404,18 +1933,12 @@ function reportarIncidencia(envioId) {
       resuelto: false
     };
 
-    if (!envioEncontrado.incidencias) envioEncontrado.incidencias = [];
-    envioEncontrado.incidencias.push(incidencia);
-    envioEncontrado.estado = 'incidencia';
+    if (!envio.incidencias) envio.incidencias = [];
+    envio.incidencias.push(incidencia);
+    envio.estado = 'incidencia';
     guardarPuntos();
-
-    if (envioEncontrado._marker) {
-      markersLayer.removeLayer(envioEncontrado._marker);
-      envioEncontrado._marker = null;
-      agregarMarcadorEnvio(envioEncontrado);
-    }
-
-    alert('✅ Incidencia reportada. El centro de acopio recibirá la notificación.');
+    actualizarMarcadorEnvio(envio);
+    alert('✅ Incidencia reportada.');
     formulario.style.display = 'none';
     btnGuardar.style.display = 'block';
     btnCancelar.style.display = 'block';
@@ -1428,41 +1951,128 @@ function reportarIncidencia(envioId) {
     btnCancelar.style.display = 'block';
   });
 }
+// ============================================================
+// BLOQUE 6: CHAT DE ADMINISTRADORES
+// ============================================================
 
-function marcarEnvioEntregado(envioId) {
-  let envioEncontrado = null;
-  let puntoPadre = null;
-  for (const punto of todosLosPuntos) {
-    if (punto.informacion?.envios) {
-      const encontrado = punto.informacion.envios.find(e => e.id === envioId);
-      if (encontrado) {
-        envioEncontrado = encontrado;
-        puntoPadre = punto;
-        break;
-      }
+// Cargar mensajes del chat desde localStorage
+function cargarMensajesChat() {
+  const stored = localStorage.getItem('chatMensajes');
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch (e) {
+      return [];
     }
   }
-  if (!envioEncontrado) { alert('❌ Envío no encontrado'); return; }
-  if (envioEncontrado.estado === 'entregado') { alert('✅ Este envío ya fue entregado'); return; }
+  return [];
+}
 
-  if (confirm(`¿Confirmas la entrega del envío a ${envioEncontrado.destinoNombre}?`)) {
-    envioEncontrado.estado = 'entregado';
-    envioEncontrado.fechaEntrega = new Date().toLocaleString();
-    envioEncontrado.ubicacionActual = { lat: envioEncontrado.destinoLat, lng: envioEncontrado.destinoLng };
-    guardarPuntos();
-    if (envioEncontrado._marker) {
-      markersLayer.removeLayer(envioEncontrado._marker);
-      envioEncontrado._marker = null;
-      agregarMarcadorEnvio(envioEncontrado);
-    }
-    alert('✅ Envío marcado como entregado. ¡Gracias por tu servicio!');
-    aplicarFiltros();
+// Guardar mensajes del chat
+function guardarMensajesChat(mensajes) {
+  localStorage.setItem('chatMensajes', JSON.stringify(mensajes));
+}
+
+// Mostrar mensajes en el panel de chat
+function renderizarChat() {
+  const contenedor = document.getElementById('mensajesChat');
+  const mensajes = cargarMensajesChat();
+  const nombreAdmin = localStorage.getItem('adminNombre') || 'Administrador';
+
+  let html = '';
+  mensajes.forEach(m => {
+    const esPropio = m.remitente === nombreAdmin;
+    html += `
+      <div class="mensaje-chat ${esPropio ? 'own' : ''}">
+        <div><strong>${m.remitente}</strong>: ${m.texto}</div>
+        <div class="meta">${m.fecha}</div>
+      </div>
+    `;
+  });
+  contenedor.innerHTML = html;
+  contenedor.scrollTop = contenedor.scrollHeight;
+}
+
+// Enviar mensaje
+function enviarMensajeChat() {
+  const input = document.getElementById('inputMensaje');
+  const texto = input.value.trim();
+  if (!texto) return;
+
+  const nombreAdmin = localStorage.getItem('adminNombre') || 'Administrador';
+  const mensajes = cargarMensajesChat();
+  mensajes.push({
+    remitente: nombreAdmin,
+    texto: texto,
+    fecha: new Date().toLocaleString()
+  });
+  guardarMensajesChat(mensajes);
+  renderizarChat();
+  input.value = '';
+}
+
+// Abrir chat
+function abrirChat() {
+  if (!modoAdmin) {
+    alert('🔐 Solo los administradores pueden acceder al chat.');
+    return;
+  }
+  const nombre = prompt('👤 Ingresa tu nombre para el chat:', localStorage.getItem('adminNombre') || '');
+  if (nombre) {
+    localStorage.setItem('adminNombre', nombre);
+  }
+  document.getElementById('panelChat').style.display = 'flex';
+  renderizarChat();
+}
+
+// Eventos del chat
+document.getElementById('btnChat').addEventListener('click', function() {
+  abrirChat();
+});
+
+document.getElementById('btnCerrarChat').addEventListener('click', function() {
+  document.getElementById('panelChat').style.display = 'none';
+});
+
+document.getElementById('btnEnviarMensaje').addEventListener('click', function() {
+  enviarMensajeChat();
+});
+
+document.getElementById('inputMensaje').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    enviarMensajeChat();
+  }
+});
+// ============================================================
+// BLOQUE 7: INICIALIZACIÓN, VERIFICACIÓN DE ENLACE, EVENTOS DE CIERRE
+// ============================================================
+
+// Verificar si hay un enlace de envío en la URL
+function verificarEnlaceEnvio() {
+  const params = new URLSearchParams(window.location.search);
+  const envioId = params.get('envio');
+  if (envioId) {
+    setTimeout(() => {
+      const envio = buscarEnvio(envioId);
+      if (envio) {
+        if (!envio.aprobacionOrigen) {
+          mostrarAprobacionOrigen(envioId);
+        } else if (envio.aprobacionOrigen && !envio.aprobacionConductor) {
+          mostrarFormularioConductor(envioId);
+        } else if (envio.aprobacionConductor && !envio.aprobacionDestino) {
+          mostrarAprobacionDestino(envioId);
+        } else {
+          alert('✅ Este envío ya está completado.');
+        }
+      } else {
+        alert('❌ Envío no encontrado o ya fue eliminado.');
+      }
+    }, 500);
+    window.history.replaceState({}, document.title, window.location.pathname);
   }
 }
 
-// ============================================================
-// INICIALIZACIÓN
-// ============================================================
+// Inicialización principal
 document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('btnAdmin').style.display = 'block';
 });
@@ -1470,4 +2080,7 @@ document.addEventListener('DOMContentLoaded', function() {
 cargarPuntos();
 obtenerUbicacion();
 
-console.log('✅ App con localStorage (sin nube) - Todos los puntos, lista y detalles');
+// Esperar a que los datos estén cargados para verificar el enlace
+setTimeout(verificarEnlaceEnvio, 800);
+
+console.log('✅ App con todas las funcionalidades: lista, urgencias, aprobación triple, chat, seguridad y protección infantil.');
