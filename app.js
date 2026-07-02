@@ -1,12 +1,10 @@
 // ============================================================
-// MAPAVIDA - APP COMPLETA
-// PARTE 1: CONFIGURACIÓN, TIPOS, CARGA Y VISUALIZACIÓN
+// MAPAVIDA - APP COMPLETA (BLOQUE 1)
+// CONFIGURACIÓN, DEFINICIONES, TIPOS, CARGA Y VISUALIZACIÓN
 // ============================================================
 
-// --- 1. CONFIGURACIÓN ---
 const ADMIN_PASSWORD = 'MapaVida2026';
 
-// --- 2. MAPA Y CONTROLES ---
 const map = L.map('map').setView([10.4806, -66.9036], 12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
@@ -28,19 +26,20 @@ let modoNavegacion = false;
 
 document.getElementById('cargando').style.display = 'none';
 
-// --- 3. DEFINICIONES DE TIPOS (con definiciones claras) ---
+// --- DEFINICIONES CLARAS PARA CADA TIPO ---
 const DEFINICIONES = {
   edificio_caido: 'Estructura que ya colapsó total o parcialmente. No ingresar. Necesita maquinaria y personal especializado para remover escombros.',
   peligro_derrumbe: 'Estructura con daños estructurales visibles (grietas, inclinación, etc.) que podría colapsar en cualquier momento. Manténgase alejado.',
   sin_inspeccionar: 'Estructura que aún no ha sido revisada por personal técnico. No se sabe si es segura o no. Evitar el ingreso hasta evaluación oficial.',
   refugio: 'Espacio habilitado para albergar personas damnificadas. Puede tener cupo limitado y necesidades específicas.',
-  centro_acopio: 'Lugar donde se recolectan y distribuyen insumos (comida, agua, medicinas, ropa, etc.) para los afectados.',
+  centro_acopio: 'Lugar donde se recolectan y distribuyen insumos (comida, agua, medicinas, ropa, etc.) para los afectados. Puede gestionar envíos de suministros.',
   hospital: 'Centro de atención médica. Puede necesitar medicamentos, sangre o personal voluntario.',
   veterinaria: 'Centro de atención para animales heridos o abandonados. Puede necesitar insumos o voluntarios.',
   ayuda_psicologica: 'Punto de apoyo emocional y contención psicológica para afectados y rescatistas.',
   vacuna_tetanos: 'Punto de vacunación contra el tétano (enfermedad grave por heridas con objetos contaminados).'
 };
 
+// --- TIPOS DE PUNTOS ---
 const TIPOS = {
   refugio: {
     label: 'Refugio', color: '#2E7D32', icono: '🏠', requiereAdmin: false,
@@ -82,7 +81,8 @@ const TIPOS = {
       suficientes: d.suficientes ? d.suficientes.split(',').map(s => s.trim()).filter(Boolean) : [],
       necesidad_infantil: d.necesidad_infantil === 'Sí',
       necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : [],
-      voluntarios_infantiles: []
+      voluntarios_infantiles: [],
+      envios: []
     }),
     popupDetalle: (info) => {
       let html = '';
@@ -232,7 +232,7 @@ const TIPOS = {
   }
 };
 
-// --- 4. FUNCIONES DE CARGA Y VISUALIZACIÓN ---
+// --- FUNCIONES DE CARGA Y VISUALIZACIÓN ---
 function cargarPuntos() {
   const stored = localStorage.getItem('puntosMapaVida');
   if (stored) {
@@ -249,9 +249,14 @@ function cargarPuntos() {
         informacion: { direccion: 'Av. Principal', cupo: 150, necesidad_infantil: true, necesidades: ['Agua', 'Comida', 'Colchonetas'], voluntarios_infantiles: [] }
       },
       {
-        id: '2', tipo: 'edificio_caido', nombre: 'Edificio Las Mercedes',
+        id: '2', tipo: 'centro_acopio', nombre: 'Centro de Acopio Las Mercedes',
         lat: 10.5000, lng: -66.9000,
-        informacion: { direccion: 'Calle 2', apoyo: ['grúa'], recogido: false, necesidades: ['Grúa', 'Voluntarios'] }
+        informacion: { direccion: 'Calle 2', necesita: ['Agua', 'Comida enlatada'], suficientes: ['Ropa'], necesidad_infantil: false, necesidades: ['Organizar donaciones'], envios: [] }
+      },
+      {
+        id: '3', tipo: 'edificio_caido', nombre: 'Edificio Las Mercedes',
+        lat: 10.5050, lng: -66.8950,
+        informacion: { direccion: 'Calle 3', apoyo: ['grúa'], recogido: false, necesidades: ['Grúa', 'Voluntarios'] }
       }
     ];
     localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
@@ -300,7 +305,6 @@ function mostrarPuntos(puntos) {
       className: ''
     });
 
-    // Definición clara del tipo (para evitar confusiones)
     const definicionTexto = tipo.definicion ? `<div class="popup-definicion">ℹ️ ${tipo.definicion}</div>` : '';
 
     let popupContent = `
@@ -311,7 +315,6 @@ function mostrarPuntos(puntos) {
       ${tipo.popupDetalle(p.informacion || {})}
     `;
 
-    // Necesidades detalladas (bloque común)
     const necesidades = p.informacion?.necesidades || [];
     if (necesidades.length > 0) {
       popupContent += `<div class="popup-seccion"><strong>📋 Más información</strong><ul class="popup-lista">`;
@@ -320,8 +323,6 @@ function mostrarPuntos(puntos) {
     }
 
     // --- BOTONES DE ACCIÓN ---
-
-    // Botón recogido (solo edificios caídos)
     if (p.tipo === 'edificio_caido' && !recogido) {
       popupContent += `
         <button class="btn-recoger" data-id="${p.id}" style="margin-top:8px;background:#4CAF50;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
@@ -332,19 +333,13 @@ function mostrarPuntos(puntos) {
       popupContent += `<div style="margin-top:8px;background:#e0e0e0;padding:6px;border-radius:6px;text-align:center;color:#333;">✅ Ya recogido y limpiado</div>`;
     }
 
-    // Botón ofrecimiento infantil (si aplica)
+    // Ofrecimiento infantil
     if (p.informacion?.necesidad_infantil && p.informacion?.voluntarios_infantiles !== undefined) {
-      const yaOfrecido = false; // Podríamos implementar con localStorage
-      if (!yaOfrecido) {
-        popupContent += `
-          <button class="btn-ofrecerse-infantil" data-id="${p.id}" style="margin-top:8px;background:#FF6F00;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
-            🧸 Ofrecerse como voluntario para niños
-          </button>
-        `;
-      } else {
-        popupContent += `<div style="margin-top:8px;background:#e0e0e0;padding:6px;border-radius:6px;text-align:center;">✅ Ya te has ofrecido</div>`;
-      }
-      // Lista de voluntarios registrados
+      popupContent += `
+        <button class="btn-ofrecerse-infantil" data-id="${p.id}" style="margin-top:8px;background:#FF6F00;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
+          🧸 Ofrecerse como voluntario para niños
+        </button>
+      `;
       if (p.informacion.voluntarios_infantiles && p.informacion.voluntarios_infantiles.length > 0) {
         popupContent += `<div class="popup-seccion"><strong>👥 Voluntarios registrados:</strong><ul class="popup-lista">`;
         p.informacion.voluntarios_infantiles.forEach(v => {
@@ -354,14 +349,36 @@ function mostrarPuntos(puntos) {
       }
     }
 
-    // Botón navegación
+    // CREAR ENVÍO (SOLO CENTROS DE ACOPIO)
+    if (p.tipo === 'centro_acopio') {
+      popupContent += `
+        <button class="btn-crear-envio" data-id="${p.id}" style="margin-top:8px;background:#F57C00;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
+          📦 Crear envío de suministros
+        </button>
+      `;
+      if (p.informacion?.envios && p.informacion.envios.length > 0) {
+        popupContent += `<div class="popup-seccion"><strong>🚚 Envíos activos:</strong><ul class="popup-lista">`;
+        p.informacion.envios.forEach(e => {
+          const estadoColor = e.estado === 'entregado' ? '#2e7d32' : e.estado === 'incidencia' ? '#d32f2f' : '#F57C00';
+          popupContent += `<li>
+            <strong>${e.contenido}</strong><br>
+            ➜ ${e.destinoNombre}<br>
+            <span style="color:${estadoColor};">${e.estado}</span>
+            ${e.incidencias && e.incidencias.length > 0 ? ` ⚠️ ${e.incidencias.filter(i => !i.resuelto).length} incidencias pendientes` : ''}
+          </li>`;
+        });
+        popupContent += `</ul></div>`;
+      }
+    }
+
+    // Navegación (pública)
     popupContent += `
       <button class="btn-navegar" data-id="${p.id}" style="margin-top:6px;background:#1a73e8;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
         🧭 Cómo llegar
       </button>
     `;
 
-    // Botón eliminar (solo admin)
+    // Eliminar (solo admin)
     if (modoAdmin) {
       popupContent += `
         <button class="btn-eliminar-admin" data-id="${p.id}" style="margin-top:6px;background:#d32f2f;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
@@ -370,7 +387,6 @@ function mostrarPuntos(puntos) {
       `;
     }
 
-    // Distancia
     if (ubicacionUsuario) {
       const dist = calcularDistancia(ubicacionUsuario.lat, ubicacionUsuario.lng, p.lat, p.lng);
       popupContent += `<div class="popup-distancia">📍 ${dist.toFixed(2)} km de ti</div>`;
@@ -380,13 +396,10 @@ function mostrarPuntos(puntos) {
       .bindPopup(popupContent, { maxWidth: 350, className: 'popup-detalle' });
 
     marker.on('popupopen', function() {
-      // Botón recoger
       const btnRecoger = document.querySelector(`.btn-recoger[data-id="${p.id}"]`);
       if (btnRecoger) btnRecoger.addEventListener('click', (e) => { e.stopPropagation(); marcarRecogido(p.id); });
-      // Botón eliminar (admin)
       const btnEliminar = document.querySelector(`.btn-eliminar-admin[data-id="${p.id}"]`);
       if (btnEliminar) btnEliminar.addEventListener('click', (e) => { e.stopPropagation(); eliminarPunto(p.id); });
-      // Botón ofrecimiento infantil
       const btnOfrecerse = document.querySelector(`.btn-ofrecerse-infantil[data-id="${p.id}"]`);
       if (btnOfrecerse) {
         btnOfrecerse.addEventListener('click', function(e) {
@@ -394,12 +407,18 @@ function mostrarPuntos(puntos) {
           mostrarFormularioVoluntarioInfantil(p.id);
         });
       }
-      // Botón navegación
       const btnNavegar = document.querySelector(`.btn-navegar[data-id="${p.id}"]`);
       if (btnNavegar) {
         btnNavegar.addEventListener('click', function(e) {
           e.stopPropagation();
           iniciarNavegacion(p.id);
+        });
+      }
+      const btnCrearEnvio = document.querySelector(`.btn-crear-envio[data-id="${p.id}"]`);
+      if (btnCrearEnvio) {
+        btnCrearEnvio.addEventListener('click', function(e) {
+          e.stopPropagation();
+          mostrarFormularioCrearEnvio(p.id);
         });
       }
     });
@@ -408,7 +427,7 @@ function mostrarPuntos(puntos) {
   });
 }
 
-// --- 5. FUNCIONES ADMIN: ELIMINAR Y MARCAR RECOGIDO ---
+// --- FUNCIONES ADMIN ---
 function marcarRecogido(id) {
   const punto = todosLosPuntos.find(p => p.id === id);
   if (!punto || punto.tipo !== 'edificio_caido' || punto.informacion.recogido) return;
@@ -427,7 +446,7 @@ function eliminarPunto(id) {
   alert('🗑️ Punto eliminado.');
 }
 
-// --- 6. GEOLOCALIZACIÓN ---
+// --- GEOLOCALIZACIÓN ---
 function obtenerUbicacion() {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
@@ -449,21 +468,20 @@ function obtenerUbicacion() {
   }
 }
 
-// --- 7. UTILIDADES ---
+// --- UTILIDADES ---
 function calcularDistancia(lat1, lon1, lat2, lon2) {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));   
 }
-
 // ============================================================
-// MAPAVIDA - APP COMPLETA
-// PARTE 2: INTERACCIÓN, FORMULARIOS, NAVEGACIÓN
+// MAPAVIDA - APP COMPLETA (BLOQUE 2)
+// INTERACCIÓN, FORMULARIOS, NAVEGACIÓN
 // ============================================================
 
-// --- 8. SELECCIÓN EN EL MAPA ---
+// --- SELECCIÓN EN EL MAPA ---
 function activarSeleccion() {
   map.getContainer().style.cursor = 'crosshair';
   map.on('click', onMapClick);
@@ -495,7 +513,7 @@ function onMapClick(e) {
   mostrarFormulario(tipoSeleccionado);
 }
 
-// --- 9. MENÚ Y FORMULARIO ---
+// --- MENÚ Y FORMULARIO ---
 const menuOpciones = document.getElementById('menuOpciones');
 const btnAgregar = document.getElementById('btnAgregar');
 const btnAdmin = document.getElementById('btnAdmin');
@@ -508,14 +526,12 @@ const btnGuardar = document.getElementById('btnGuardar');
 const btnEliminar = document.getElementById('btnEliminar');
 const btnCancelar = document.getElementById('btnCancelar');
 
-// Mostrar/ocultar menú
 btnAgregar.addEventListener('click', function(e) {
   e.stopPropagation();
   menuOpciones.style.display = (menuOpciones.style.display === 'flex') ? 'none' : 'flex';
 });
 document.addEventListener('click', function() { menuOpciones.style.display = 'none'; });
 
-// Botón administrador
 btnAdmin.addEventListener('click', function() {
   const pass = prompt('Ingresa la contraseña de administrador:');
   if (pass === ADMIN_PASSWORD) {
@@ -530,7 +546,6 @@ btnAdmin.addEventListener('click', function() {
   }
 });
 
-// Seleccionar tipo del menú
 document.querySelectorAll('#menuOpciones button').forEach(btn => {
   btn.addEventListener('click', function(e) {
     e.stopPropagation();
@@ -572,7 +587,7 @@ function mostrarFormulario(tipo) {
   puntoEnEdicion = null;
 }
 
-// --- 10. GUARDAR ---
+// --- GUARDAR ---
 btnGuardar.addEventListener('click', function() {
   if (!tipoSeleccionado) { alert('Selecciona un tipo primero'); return; }
   if (!ubicacionSeleccionada) { alert('Toca el mapa para seleccionar ubicación'); return; }
@@ -610,20 +625,16 @@ btnGuardar.addEventListener('click', function() {
   aplicarFiltros();
 });
 
-// --- 11. CANCELAR ---
+// --- CANCELAR ---
 btnCancelar.addEventListener('click', function() {
-  // Si el formulario de voluntario está abierto, cancelarlo también
   const btnRegistro = document.getElementById('btnRegistrarVoluntario');
-  if (btnRegistro) {
-    // Ya se maneja desde el botón de cancelar del formulario de voluntario
-    return;
-  }
+  if (btnRegistro) return;
   formulario.style.display = 'none';
   desactivarSeleccion();
   ubicacionSeleccionada = null;
 });
 
-// --- 12. BUSCADOR ---
+// --- BUSCADOR ---
 document.getElementById('btnBuscar').addEventListener('click', async function() {
   const query = document.getElementById('buscador').value.trim();
   if (!query) return;
@@ -644,7 +655,7 @@ document.getElementById('buscador').addEventListener('keypress', function(e) {
   if (e.key === 'Enter') document.getElementById('btnBuscar').click();
 });
 
-// --- 13. FILTROS ---
+// --- FILTROS ---
 document.querySelectorAll('#filtros .filtro-btn').forEach(btn => {
   btn.addEventListener('click', function() {
     document.querySelectorAll('#filtros .filtro-btn').forEach(b => b.classList.remove('activo'));
@@ -654,7 +665,7 @@ document.querySelectorAll('#filtros .filtro-btn').forEach(btn => {
   });
 });
 
-// --- 14. FORMULARIO DE VOLUNTARIO INFANTIL ---
+// --- VOLUNTARIO INFANTIL ---
 function mostrarFormularioVoluntarioInfantil(puntoId) {
   const punto = todosLosPuntos.find(p => p.id === puntoId);
   if (!punto) return;
@@ -666,25 +677,18 @@ function mostrarFormularioVoluntarioInfantil(puntoId) {
     </p>
     <label>Nombre completo (2 nombres y 2 apellidos) *</label>
     <input type="text" id="v_nombre" required />
-
     <label>Número de cédula *</label>
     <input type="text" id="v_cedula" required />
-
     <label>Enlace a foto de la cédula (URL) *</label>
     <input type="text" id="v_foto_cedula" placeholder="https://..." required />
-
     <label>Enlace a foto actualizada (URL) *</label>
     <input type="text" id="v_foto_personal" placeholder="https://..." required />
-
     <label>Teléfono de contacto</label>
     <input type="text" id="v_telefono" />
-
     <label>Rol (recreador, cuidador, voluntario, etc.)</label>
     <input type="text" id="v_rol" placeholder="Voluntario" />
-
     <label>Mensaje de seguridad para los niños (opcional)</label>
     <textarea id="v_mensaje" rows="3">Estamos aquí para cuidarte y protegerte. Tu bienestar es lo más importante.</textarea>
-
     <button id="btnRegistrarVoluntario" data-id="${puntoId}" style="margin-top:12px;background:#FF6F00;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">
       ✅ Registrar voluntario
     </button>
@@ -693,16 +697,12 @@ function mostrarFormularioVoluntarioInfantil(puntoId) {
     </button>
   `;
 
-  const formTitulo = document.getElementById('formTitulo');
-  const camposDinamicos = document.getElementById('camposDinamicos');
-  
   formTitulo.innerHTML = '🧸 Registro de voluntario infantil';
   camposDinamicos.innerHTML = html;
   formulario.style.display = 'block';
-  
-  document.getElementById('btnGuardar').style.display = 'none';
-  document.getElementById('btnEliminar').style.display = 'none';
-  document.getElementById('btnCancelar').style.display = 'none';
+  btnGuardar.style.display = 'none';
+  btnEliminar.style.display = 'none';
+  btnCancelar.style.display = 'none';
 
   document.getElementById('btnRegistrarVoluntario').addEventListener('click', function() {
     const nombre = document.getElementById('v_nombre').value.trim();
@@ -720,28 +720,24 @@ function mostrarFormularioVoluntarioInfantil(puntoId) {
 
     const punto = todosLosPuntos.find(p => p.id === puntoId);
     if (!punto) return;
-    if (!punto.informacion.voluntarios_infantiles) {
-      punto.informacion.voluntarios_infantiles = [];
-    }
-    punto.informacion.voluntarios_infantiles.push({
-      nombre, cedula, foto_cedula, foto_personal, telefono, rol, mensaje
-    });
+    if (!punto.informacion.voluntarios_infantiles) punto.informacion.voluntarios_infantiles = [];
+    punto.informacion.voluntarios_infantiles.push({ nombre, cedula, foto_cedula, foto_personal, telefono, rol, mensaje });
     guardarPuntos();
     alert('✅ Te has registrado como voluntario para actividades infantiles. ¡Gracias por tu ayuda!');
     formulario.style.display = 'none';
-    document.getElementById('btnGuardar').style.display = 'block';
-    document.getElementById('btnCancelar').style.display = 'block';
+    btnGuardar.style.display = 'block';
+    btnCancelar.style.display = 'block';
     aplicarFiltros();
   });
 
   document.getElementById('btnCancelarVoluntario').addEventListener('click', function() {
     formulario.style.display = 'none';
-    document.getElementById('btnGuardar').style.display = 'block';
-    document.getElementById('btnCancelar').style.display = 'block';
+    btnGuardar.style.display = 'block';
+    btnCancelar.style.display = 'block';
   });
 }
 
-// --- 15. NAVEGACIÓN (RUTA HASTA UN PUNTO) ---
+// --- NAVEGACIÓN ---
 function iniciarNavegacion(puntoId) {
   const punto = todosLosPuntos.find(p => p.id === puntoId);
   if (!punto) return alert('Punto no encontrado');
@@ -763,47 +759,24 @@ function iniciarNavegacion(puntoId) {
 }
 
 function trazarRuta(origen, destino, nombreDestino) {
-  if (controlRuta) {
-    map.removeControl(controlRuta);
-    controlRuta = null;
-  }
+  if (controlRuta) { map.removeControl(controlRuta); controlRuta = null; }
 
   controlRuta = L.Routing.control({
-    waypoints: [
-      L.latLng(origen.lat, origen.lng),
-      L.latLng(destino.lat, destino.lng)
-    ],
+    waypoints: [L.latLng(origen.lat, origen.lng), L.latLng(destino.lat, destino.lng)],
     routeWhileDragging: true,
     showAlternatives: false,
-    lineOptions: {
-      styles: [{ color: '#E53935', weight: 5, opacity: 0.8 }],
-      extendToWaypoints: false,
-      missingRouteTolerance: 0
-    },
-    altLineOptions: {
-      styles: [{ color: '#1976D2', weight: 3, opacity: 0.4 }]
-    },
-    router: L.Routing.osrmv1({
-      serviceUrl: 'https://router.project-osrm.org/route/v1'
-    }),
-    plan: L.Routing.plan([
-      L.latLng(origen.lat, origen.lng),
-      L.latLng(destino.lat, destino.lng)
-    ], {
+    lineOptions: { styles: [{ color: '#E53935', weight: 5, opacity: 0.8 }], extendToWaypoints: false, missingRouteTolerance: 0 },
+    altLineOptions: { styles: [{ color: '#1976D2', weight: 3, opacity: 0.4 }] },
+    router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' }),
+    plan: L.Routing.plan([L.latLng(origen.lat, origen.lng), L.latLng(destino.lat, destino.lng)], {
       createMarker: function(i, wp) {
         if (i === 0) {
           return L.marker(wp.latLng, {
-            icon: L.divIcon({
-              html: '<div style="background:#1a73e8;border-radius:50%;width:16px;height:16px;border:3px solid white;box-shadow:0 0 10px rgba(26,115,232,0.6);"></div>',
-              iconSize: [16, 16]
-            })
+            icon: L.divIcon({ html: '<div style="background:#1a73e8;border-radius:50%;width:16px;height:16px;border:3px solid white;box-shadow:0 0 10px rgba(26,115,232,0.6);"></div>', iconSize: [16, 16] })
           }).bindPopup('📍 Origen');
         } else {
           return L.marker(wp.latLng, {
-            icon: L.divIcon({
-              html: `<div style="background:#E53935;border-radius:50%;width:20px;height:20px;border:3px solid white;box-shadow:0 0 10px rgba(229,57,53,0.6);display:flex;align-items:center;justify-content:center;font-size:12px;color:white;font-weight:bold;">🏁</div>`,
-              iconSize: [20, 20]
-            })
+            icon: L.divIcon({ html: `<div style="background:#E53935;border-radius:50%;width:20px;height:20px;border:3px solid white;box-shadow:0 0 10px rgba(229,57,53,0.6);display:flex;align-items:center;justify-content:center;font-size:12px;color:white;font-weight:bold;">🏁</div>`, iconSize: [20, 20] })
           }).bindPopup(`📍 ${nombreDestino}`);
         }
       }
@@ -826,21 +799,310 @@ function trazarRuta(origen, destino, nombreDestino) {
 }
 
 function cancelarNavegacion() {
-  if (controlRuta) {
-    map.removeControl(controlRuta);
-    controlRuta = null;
-  }
+  if (controlRuta) { map.removeControl(controlRuta); controlRuta = null; }
   modoNavegacion = false;
   document.getElementById('btnCancelarNavegacion').style.display = 'none';
   alert('🧭 Navegación cancelada');
 }
 
-// --- 16. MOSTRAR BOTÓN ADMIN Y INICIO ---
+// --- INICIO ---
 document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('btnAdmin').style.display = 'block';
 });
-
 cargarPuntos();
 obtenerUbicacion();
+console.log('✅ App completa con definiciones, protección infantil, navegación y transporte de suministros');
+// ============================================================
+// MAPAVIDA - APP COMPLETA (BLOQUE 3)
+// TRANSPORTE DE SUMINISTROS CON INCIDENCIAS
+// ============================================================
 
-console.log('✅ App completa con definiciones, protección infantil y navegación');
+function mostrarFormularioCrearEnvio(puntoId) {
+  const punto = todosLosPuntos.find(p => p.id === puntoId);
+  if (!punto || punto.tipo !== 'centro_acopio') return;
+
+  const destinos = todosLosPuntos.filter(p => 
+    p.id !== puntoId && ['refugio', 'hospital', 'centro_acopio', 'veterinaria'].includes(p.tipo)
+  );
+
+  if (destinos.length === 0) {
+    alert('⚠️ No hay puntos de destino disponibles para enviar suministros. Agrega refugios u hospitales primero.');
+    return;
+  }
+
+  let html = `
+    <h3 style="color:#F57C00;">📦 Crear envío de suministros</h3>
+    <label>Destino *</label>
+    <select id="envio_destino" required>
+      <option value="">Selecciona un destino...</option>
+  `;
+  destinos.forEach(d => {
+    html += `<option value="${d.id}">${d.nombre} (${TIPOS[d.tipo].label})</option>`;
+  });
+  html += `</select>`;
+
+  html += `
+    <label>Contenido del envío (ej: 50 raciones de comida, 30 litros de agua) *</label>
+    <input type="text" id="envio_contenido" placeholder="Descripción detallada del contenido" required />
+    <label>Tipo de vehículo</label>
+    <select id="envio_vehiculo">
+      <option value="Camión">Camión</option>
+      <option value="Pickup">Pickup</option>
+      <option value="Furgoneta">Furgoneta</option>
+      <option value="Motocicleta">Motocicleta</option>
+      <option value="Bicicleta">Bicicleta</option>
+    </select>
+    <label>Conductor (nombre y cédula)</label>
+    <input type="text" id="envio_conductor" placeholder="Nombre completo y cédula del conductor" />
+    <label>Observaciones adicionales</label>
+    <textarea id="envio_observaciones" rows="2" placeholder="Instrucciones especiales, contacto, etc."></textarea>
+    <button id="btnCrearEnvio" data-id="${puntoId}" style="margin-top:12px;background:#F57C00;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">
+      📦 Crear envío
+    </button>
+    <button id="btnCancelarEnvio" style="margin-top:6px;background:#666;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">
+      ❌ Cancelar
+    </button>
+  `;
+
+  formTitulo.innerHTML = '📦 Nuevo envío de suministros';
+  camposDinamicos.innerHTML = html;
+  formulario.style.display = 'block';
+  btnGuardar.style.display = 'none';
+  btnEliminar.style.display = 'none';
+  btnCancelar.style.display = 'none';
+
+  document.getElementById('btnCrearEnvio').addEventListener('click', function() {
+    const destinoId = document.getElementById('envio_destino').value;
+    const contenido = document.getElementById('envio_contenido').value.trim();
+    const vehiculo = document.getElementById('envio_vehiculo').value;
+    const conductor = document.getElementById('envio_conductor').value.trim();
+    const observaciones = document.getElementById('envio_observaciones').value.trim();
+
+    if (!destinoId) { alert('❌ Debes seleccionar un destino'); return; }
+    if (!contenido) { alert('❌ Debes describir el contenido del envío'); return; }
+
+    const destino = todosLosPuntos.find(p => p.id === destinoId);
+    if (!destino) { alert('❌ Destino no encontrado'); return; }
+    const origen = punto;
+
+    const nuevoEnvio = {
+      id: Date.now().toString(),
+      origenId: origen.id,
+      destinoId: destino.id,
+      origenNombre: origen.nombre,
+      destinoNombre: destino.nombre,
+      contenido: contenido,
+      vehiculo: vehiculo,
+      conductor: conductor || 'No especificado',
+      observaciones: observaciones || 'Sin observaciones',
+      estado: 'pendiente',
+      ubicacionActual: { lat: origen.lat, lng: origen.lng },
+      destinoLat: destino.lat,
+      destinoLng: destino.lng,
+      incidencias: [],
+      fechaCreacion: new Date().toLocaleString(),
+      fechaEntrega: null
+    };
+
+    if (!punto.informacion.envios) punto.informacion.envios = [];
+    punto.informacion.envios.push(nuevoEnvio);
+    guardarPuntos();
+    agregarMarcadorEnvio(nuevoEnvio);
+
+    alert('✅ Envío creado exitosamente. El marcador aparecerá en el mapa.');
+    formulario.style.display = 'none';
+    btnGuardar.style.display = 'block';
+    btnCancelar.style.display = 'block';
+    aplicarFiltros();
+  });
+
+  document.getElementById('btnCancelarEnvio').addEventListener('click', function() {
+    formulario.style.display = 'none';
+    btnGuardar.style.display = 'block';
+    btnCancelar.style.display = 'block';
+  });
+}
+
+function agregarMarcadorEnvio(envio) {
+  const icon = L.divIcon({
+    html: `<div style="background:#F57C00;color:white;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);">🚚</div>`,
+    iconSize: [30, 30],
+    className: 'envio-marker'
+  });
+
+  let popupContent = `
+    <div class="popup-tipo">🚚 Envío de suministros</div>
+    <strong>${envio.contenido}</strong><br>
+    📍 Desde: ${envio.origenNombre}<br>
+    📍 Hacia: ${envio.destinoNombre}<br>
+    🚗 Vehículo: ${envio.vehiculo}<br>
+    👤 Conductor: ${envio.conductor}<br>
+    📊 Estado: <strong style="color:${envio.estado === 'entregado' ? '#2e7d32' : envio.estado === 'incidencia' ? '#d32f2f' : '#F57C00'};">${envio.estado}</strong><br>
+    📅 Creado: ${envio.fechaCreacion}
+  `;
+
+  if (envio.incidencias && envio.incidencias.length > 0) {
+    popupContent += `<div class="popup-seccion"><strong>⚠️ Incidencias reportadas:</strong><ul class="popup-lista">`;
+    envio.incidencias.forEach(inc => {
+      const resuelto = inc.resuelto ? '✅ Resuelta' : '⏳ Pendiente';
+      popupContent += `<li><strong>${inc.fecha}</strong><br>${inc.titulo}<br><em>${inc.descripcion}</em><br>${resuelto}</li>`;
+    });
+    popupContent += `</ul></div>`;
+  }
+
+  if (modoAdmin || envio.estado !== 'entregado') {
+    popupContent += `
+      <button class="btn-reportar-incidencia" data-envio-id="${envio.id}" style="margin-top:8px;background:#d32f2f;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
+        ⚠️ Reportar incidencia
+      </button>
+    `;
+    if (envio.estado === 'pendiente' || envio.estado === 'en_ruta') {
+      popupContent += `
+        <button class="btn-marcar-entregado" data-envio-id="${envio.id}" style="margin-top:4px;background:#2e7d32;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
+          ✅ Marcar como entregado
+        </button>
+      `;
+    }
+  }
+
+  const marker = L.marker([envio.ubicacionActual.lat, envio.ubicacionActual.lng], { icon })
+    .bindPopup(popupContent, { maxWidth: 350, className: 'popup-detalle' });
+
+  marker.on('popupopen', function() {
+    const btnIncidencia = document.querySelector(`.btn-reportar-incidencia[data-envio-id="${envio.id}"]`);
+    if (btnIncidencia) {
+      btnIncidencia.addEventListener('click', function(e) {
+        e.stopPropagation();
+        reportarIncidencia(envio.id);
+      });
+    }
+    const btnEntregado = document.querySelector(`.btn-marcar-entregado[data-envio-id="${envio.id}"]`);
+    if (btnEntregado) {
+      btnEntregado.addEventListener('click', function(e) {
+        e.stopPropagation();
+        marcarEnvioEntregado(envio.id);
+      });
+    }
+  });
+
+  envio._marker = marker;
+  markersLayer.addLayer(marker);
+}
+
+function reportarIncidencia(envioId) {
+  let envioEncontrado = null;
+  let puntoPadre = null;
+  for (const punto of todosLosPuntos) {
+    if (punto.informacion?.envios) {
+      const encontrado = punto.informacion.envios.find(e => e.id === envioId);
+      if (encontrado) {
+        envioEncontrado = encontrado;
+        puntoPadre = punto;
+        break;
+      }
+    }
+  }
+
+  if (!envioEncontrado) { alert('❌ Envío no encontrado'); return; }
+
+  const html = `
+    <h3 style="color:#d32f2f;">⚠️ Reportar incidencia</h3>
+    <p style="font-size:14px;color:#555;margin-bottom:12px;">
+      Describe detalladamente lo que ocurrió durante el transporte de suministros.
+    </p>
+    <label>Título de la incidencia *</label>
+    <input type="text" id="inc_titulo" placeholder="Ej: Accidente en la vía" required />
+    <label>Descripción detallada *</label>
+    <textarea id="inc_descripcion" rows="4" placeholder="Describe con detalle lo que pasó: lugar, hora, personas involucradas, daños, etc." required></textarea>
+    <label>¿Requiere asistencia?</label>
+    <select id="inc_asistencia">
+      <option value="no">No</option>
+      <option value="si">Sí (contactar a emergencias)</option>
+    </select>
+    <button id="btnGuardarIncidencia" data-envio-id="${envioId}" style="margin-top:12px;background:#d32f2f;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">
+      📨 Reportar incidencia
+    </button>
+    <button id="btnCancelarIncidencia" style="margin-top:6px;background:#666;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">
+      ❌ Cancelar
+    </button>
+  `;
+
+  formTitulo.innerHTML = '⚠️ Reporte de incidencia';
+  camposDinamicos.innerHTML = html;
+  formulario.style.display = 'block';
+  btnGuardar.style.display = 'none';
+  btnEliminar.style.display = 'none';
+  btnCancelar.style.display = 'none';
+
+  document.getElementById('btnGuardarIncidencia').addEventListener('click', function() {
+    const titulo = document.getElementById('inc_titulo').value.trim();
+    const descripcion = document.getElementById('inc_descripcion').value.trim();
+    const asistencia = document.getElementById('inc_asistencia').value;
+
+    if (!titulo) { alert('❌ El título es obligatorio'); return; }
+    if (!descripcion) { alert('❌ La descripción es obligatoria'); return; }
+
+    const incidencia = {
+      id: Date.now().toString(),
+      fecha: new Date().toLocaleString(),
+      titulo: titulo,
+      descripcion: descripcion,
+      requiereAsistencia: asistencia === 'si',
+      resuelto: false
+    };
+
+    if (!envioEncontrado.incidencias) envioEncontrado.incidencias = [];
+    envioEncontrado.incidencias.push(incidencia);
+    envioEncontrado.estado = 'incidencia';
+    guardarPuntos();
+
+    if (envioEncontrado._marker) {
+      markersLayer.removeLayer(envioEncontrado._marker);
+      envioEncontrado._marker = null;
+      agregarMarcadorEnvio(envioEncontrado);
+    }
+
+    alert('✅ Incidencia reportada. El centro de acopio recibirá la notificación.');
+    formulario.style.display = 'none';
+    btnGuardar.style.display = 'block';
+    btnCancelar.style.display = 'block';
+    aplicarFiltros();
+  });
+
+  document.getElementById('btnCancelarIncidencia').addEventListener('click', function() {
+    formulario.style.display = 'none';
+    btnGuardar.style.display = 'block';
+    btnCancelar.style.display = 'block';
+  });
+}
+
+function marcarEnvioEntregado(envioId) {
+  let envioEncontrado = null;
+  for (const punto of todosLosPuntos) {
+    if (punto.informacion?.envios) {
+      const encontrado = punto.informacion.envios.find(e => e.id === envioId);
+      if (encontrado) {
+        envioEncontrado = encontrado;
+        break;
+      }
+    }
+  }
+  if (!envioEncontrado) { alert('❌ Envío no encontrado'); return; }
+  if (envioEncontrado.estado === 'entregado') { alert('✅ Este envío ya fue entregado'); return; }
+
+  if (confirm(`¿Confirmas la entrega del envío a ${envioEncontrado.destinoNombre}?`)) {
+    envioEncontrado.estado = 'entregado';
+    envioEncontrado.fechaEntrega = new Date().toLocaleString();
+    envioEncontrado.ubicacionActual = { lat: envioEncontrado.destinoLat, lng: envioEncontrado.destinoLng };
+    guardarPuntos();
+    if (envioEncontrado._marker) {
+      markersLayer.removeLayer(envioEncontrado._marker);
+      envioEncontrado._marker = null;
+      agregarMarcadorEnvio(envioEncontrado);
+    }
+    alert('✅ Envío marcado como entregado. ¡Gracias por tu servicio!');
+    aplicarFiltros();
+  }
+}
+
+console.log('✅ Módulo de transporte de suministros cargado');
