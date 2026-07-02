@@ -4,18 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>MapaVida - Asistencia Venezuela</title>
-  
-  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  
   <style>
+    /* Estilos base (mantener los mismos que antes) */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; }
     #map { height: 100vh; width: 100%; }
 
-    /* === Panel superior === */
     #panelSuperior {
       position: fixed;
       top: 10px;
@@ -84,7 +80,6 @@
       border-radius: 50%;
     }
 
-    /* === Botón flotante "Agregar" === */
     #menuContainer {
       position: fixed;
       bottom: 30px;
@@ -134,8 +129,24 @@
       text-align: center;
     }
     #btnAgregar:active { transform: scale(0.95); }
+    /* Botón administrador (solo aparece con contraseña) */
+    #btnAdmin {
+      background: #1a237e;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: bold;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      cursor: pointer;
+      margin-bottom: 8px;
+      text-align: center;
+      width: 100%;
+      display: none;
+    }
+    #btnAdmin:active { transform: scale(0.95); }
 
-    /* === Formulario === */
     #formulario {
       display: none;
       position: fixed;
@@ -196,13 +207,23 @@
     }
     #btnGuardar { background: #4CAF50; color: white; }
     #btnCancelar { background: #666; color: white; margin-top: 6px; }
+    /* Botón eliminar (solo administrador) */
+    #btnEliminar {
+      background: #d32f2f;
+      color: white;
+      margin-top: 6px;
+      display: none;
+    }
 
-    /* === Popup del mapa === */
     .popup-tipo { font-weight: bold; color: #E53935; }
     .popup-info { font-size: 13px; margin: 3px 0; }
     .popup-distancia { font-size: 12px; color: #555; margin-top: 4px; }
+    .popup-seccion { margin-top: 8px; border-top: 1px solid #e0e0e0; padding-top: 6px; }
+    .popup-lista { margin: 4px 0 0 0; padding-left: 18px; font-size: 13px; }
+    .popup-lista li { margin-bottom: 2px; }
+    .popup-mensaje-bonito { background: #fff3e0; padding: 10px; border-radius: 8px; margin: 6px 0; border-left: 4px solid #E53935; }
+    .popup-mensaje-bonito p { margin: 0; font-size: 13px; color: #4e342e; }
 
-    /* === Loader === */
     #cargando {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -226,7 +247,6 @@
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-    /* === Responsive === */
     @media (max-width: 480px) {
       #panelSuperior input { font-size: 13px; padding: 6px 10px; }
       #panelSuperior button { font-size: 12px; padding: 5px 12px; }
@@ -236,14 +256,8 @@
   </style>
 </head>
 <body>
+  <div id="cargando"><div class="spinner"></div><div>Cargando mapa...</div></div>
 
-  <!-- LOADER -->
-  <div id="cargando">
-    <div class="spinner"></div>
-    <div>Cargando mapa...</div>
-  </div>
-
-  <!-- PANEL SUPERIOR -->
   <div id="panelSuperior">
     <input type="text" id="buscador" placeholder="Buscar ubicación (ej: Los Rosales, Caracas)" />
     <button id="btnBuscar">🔍 Buscar</button>
@@ -256,13 +270,14 @@
       <button class="filtro-btn" data-tipo="peligro_derrumbe"><span class="color-bola" style="background:#E65100;"></span> Derrumbe</button>
       <button class="filtro-btn" data-tipo="sin_inspeccionar"><span class="color-bola" style="background:#6A1B9A;"></span> Sin insp.</button>
       <button class="filtro-btn" data-tipo="veterinaria"><span class="color-bola" style="background:#00897B;"></span> Veterinaria</button>
+      <button class="filtro-btn" data-tipo="ayuda_psicologica"><span class="color-bola" style="background:#8E24AA;"></span> Psicología</button>
+      <button class="filtro-btn" data-tipo="vacuna_tetanos"><span class="color-bola" style="background:#0D47A1;"></span> Vacuna</button>
+      <button class="filtro-btn" data-tipo="proteccion_infantil"><span class="color-bola" style="background:#FF6F00;"></span> Protección infantil</button>
     </div>
   </div>
 
-  <!-- MAPA -->
   <div id="map"></div>
 
-  <!-- MENÚ FLOTANTE -->
   <div id="menuContainer">
     <div id="menuOpciones">
       <button data-tipo="refugio"><span class="color-bola" style="background:#2E7D32;width:14px;height:14px;"></span> 🏠 Refugio</button>
@@ -272,11 +287,14 @@
       <button data-tipo="peligro_derrumbe"><span class="color-bola" style="background:#E65100;width:14px;height:14px;"></span> ⚠️ Derrumbe</button>
       <button data-tipo="sin_inspeccionar"><span class="color-bola" style="background:#6A1B9A;width:14px;height:14px;"></span> ❓ Sin insp.</button>
       <button data-tipo="veterinaria"><span class="color-bola" style="background:#00897B;width:14px;height:14px;"></span> 🐾 Veterinaria</button>
+      <button data-tipo="ayuda_psicologica"><span class="color-bola" style="background:#8E24AA;width:14px;height:14px;"></span> 🧠 Psicología</button>
+      <button data-tipo="vacuna_tetanos"><span class="color-bola" style="background:#0D47A1;width:14px;height:14px;"></span> 💉 Vacuna</button>
+      <button data-tipo="proteccion_infantil"><span class="color-bola" style="background:#FF6F00;width:14px;height:14px;"></span> 👶 Protección infantil</button>
     </div>
+    <button id="btnAdmin" style="display:none;">🔐 Administrar (desbloquear)</button>
     <button id="btnAgregar">➕ Agregar</button>
   </div>
 
-  <!-- FORMULARIO -->
   <div id="formulario">
     <h3 id="formTitulo">📝 Nuevo punto</h3>
     <div id="camposDinamicos"></div>
@@ -285,12 +303,10 @@
       <span>📍 Lng:</span> <span id="fLngDisplay">---</span>
     </div>
     <button id="btnGuardar">✅ Guardar</button>
+    <button id="btnEliminar" style="display:none;">🗑️ Eliminar punto</button>
     <button id="btnCancelar">❌ Cancelar</button>
   </div>
 
-  <!-- ========================================================== -->
-  <!-- CARGAR EL ARCHIVO DE JAVASCRIPT EXTERNO (SIN SUPABASE) -->
-  <!-- ========================================================== -->
   <script src="app.js"></script>
 </body>
 </html>
