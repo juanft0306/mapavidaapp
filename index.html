@@ -196,6 +196,22 @@
       width: 100%;
     }
     #btnSeguridad:active { transform: scale(0.95); }
+    #btnPendientes {
+      display: none;
+      background: #f57f17;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: bold;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      cursor: pointer;
+      margin-bottom: 8px;
+      text-align: center;
+      width: 100%;
+    }
+    #btnPendientes:active { transform: scale(0.95); }
     #btnAuth {
       background: #1a237e;
       color: white;
@@ -427,8 +443,6 @@
       margin-bottom: 12px;
       flex-wrap: wrap;
       gap: 8px;
-      cursor: pointer;
-      user-select: none;
     }
     #panelLista .header-lista h2 { margin: 0; }
     #panelLista .header-lista button {
@@ -508,8 +522,6 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 12px;
-      cursor: pointer;
-      user-select: none;
     }
     #panelDetalle .header-detalle h3 { margin: 0; }
     #panelDetalle .header-detalle button {
@@ -544,8 +556,6 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 12px;
-      cursor: pointer;
-      user-select: none;
     }
     #panelUrgencias .header-urgencias h2 { margin: 0; color: #d32f2f; }
     #panelUrgencias .header-urgencias button {
@@ -556,22 +566,6 @@
       border-radius: 8px;
       cursor: pointer;
       font-weight: bold;
-    }
-
-    /* ===== ESTADO MINIMIZADO ===== */
-    .panel-minimizado {
-      height: 50px !important;
-      min-height: 50px !important;
-      overflow: hidden !important;
-      cursor: pointer;
-    }
-    .panel-minimizado .panel-contenido {
-      display: none !important;
-    }
-    .panel-minimizado .header-lista,
-    .panel-minimizado .header-detalle,
-    .panel-minimizado .header-urgencias {
-      cursor: pointer;
     }
 
     /* ===== CHAT ===== */
@@ -777,6 +771,7 @@
     <button id="btnAdmin" style="display:none;">🔐 Administrar (desbloquear)</button>
     <button id="btnChat" style="display:none;">💬 Chat administradores</button>
     <button id="btnSeguridad" style="display:none;">🔐 Seguridad</button>
+    <button id="btnPendientes" style="display:none;">⏳ Pendientes</button>
     <button id="btnAgregar">➕ Agregar</button>
   </div>
 
@@ -953,3 +948,4 @@
   <script src="app.js"></script>
 </body>
 </html>
+  
