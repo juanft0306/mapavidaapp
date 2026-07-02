@@ -15,8 +15,9 @@
   <!-- Leaflet Routing Machine JS -->
   <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
   
-  <!-- Supabase JS -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Firebase SDK (versión compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   
   <!-- DOMPurify (para sanitizar HTML) -->
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.0/dist/purify.min.js"></script>
@@ -888,7 +889,7 @@
     <button id="btnCambiarPassword" style="margin-top:12px;background:#d32f2f;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">🔄 Cambiar contraseña</button>
     <button id="btnCerrarSeguridad" style="margin-top:6px;background:#666;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">❌ Cerrar</button>
   </div>
-  <!-- PANEL DE LISTA -->
+    <!-- PANEL DE LISTA -->
   <div id="panelLista">
     <div class="header-lista" id="headerLista">
       <h2>📋 Todos los puntos</h2>
