@@ -1,8 +1,15 @@
 // ============================================================
-// MAPAVIDA - APP COMPLETA (BLOQUE 1)
-// CONFIGURACIÓN, DEFINICIONES, TIPOS, CARGA Y VISUALIZACIÓN
+// MAPAVIDA - BLOQUE 1 (PARTE 1)
+// CONFIGURACIÓN, DEFINICIONES Y TIPOS
 // ============================================================
 
+// --- CONFIGURACIÓN DE SUPABASE ---
+const SUPABASE_URL = 'https://gtaadqluoljexglenbqo.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_n_h1fN6QWuEWbFxrCTKFvQ_rxw-o9-Y'; // <-- REEMPLAZA
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+console.log('✅ Conectado a Supabase');
+
+// --- CONFIGURACIÓN GENERAL ---
 const ADMIN_PASSWORD = 'MapaVida2026';
 
 const map = L.map('map').setView([10.4806, -66.9036], 12);
@@ -231,43 +238,84 @@ const TIPOS = {
     }
   }
 };
+// ============================================================
+// MAPAVIDA - BLOQUE 1 (PARTE 2)
+// FUNCIONES DE CARGA, VISUALIZACIÓN, ADMIN Y UTILIDADES
+// ============================================================
 
-// --- FUNCIONES DE CARGA Y VISUALIZACIÓN ---
-function cargarPuntos() {
-  const stored = localStorage.getItem('puntosMapaVida');
-  if (stored) {
-    try {
-      todosLosPuntos = JSON.parse(stored);
-    } catch (e) {
-      todosLosPuntos = [];
-    }
-  } else {
-    todosLosPuntos = [
-      {
-        id: '1', tipo: 'refugio', nombre: 'Refugio Los Rosales',
-        lat: 10.4910, lng: -66.8730,
-        informacion: { direccion: 'Av. Principal', cupo: 150, necesidad_infantil: true, necesidades: ['Agua', 'Comida', 'Colchonetas'], voluntarios_infantiles: [] }
-      },
-      {
-        id: '2', tipo: 'centro_acopio', nombre: 'Centro de Acopio Las Mercedes',
-        lat: 10.5000, lng: -66.9000,
-        informacion: { direccion: 'Calle 2', necesita: ['Agua', 'Comida enlatada'], suficientes: ['Ropa'], necesidad_infantil: false, necesidades: ['Organizar donaciones'], envios: [] }
-      },
-      {
-        id: '3', tipo: 'edificio_caido', nombre: 'Edificio Las Mercedes',
-        lat: 10.5050, lng: -66.8950,
-        informacion: { direccion: 'Calle 3', apoyo: ['grúa'], recogido: false, necesidades: ['Grúa', 'Voluntarios'] }
+// --- CARGAR PUNTOS DESDE SUPABASE ---
+async function cargarPuntos() {
+  try {
+    const { data, error } = await supabase
+      .from('puntos')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    todosLosPuntos = data || [];
+    aplicarFiltros();
+  } catch (error) {
+    console.error('❌ Error al cargar desde Supabase:', error);
+    // Fallback: cargar desde localStorage
+    const stored = localStorage.getItem('puntosMapaVida');
+    if (stored) {
+      try {
+        todosLosPuntos = JSON.parse(stored);
+        aplicarFiltros();
+        alert('⚠️ Usando datos locales (falló la conexión a la nube)');
+      } catch (e) {
+        todosLosPuntos = [];
       }
-    ];
-    localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
+    } else {
+      // Datos de ejemplo si no hay nada
+      todosLosPuntos = [
+        {
+          id: '1', tipo: 'refugio', nombre: 'Refugio Los Rosales',
+          lat: 10.4910, lng: -66.8730,
+          informacion: { direccion: 'Av. Principal', cupo: 150, necesidad_infantil: true, necesidades: ['Agua', 'Comida', 'Colchonetas'], voluntarios_infantiles: [] }
+        },
+        {
+          id: '2', tipo: 'centro_acopio', nombre: 'Centro de Acopio Las Mercedes',
+          lat: 10.5000, lng: -66.9000,
+          informacion: { direccion: 'Calle 2', necesita: ['Agua', 'Comida enlatada'], suficientes: ['Ropa'], necesidad_infantil: false, necesidades: ['Organizar donaciones'], envios: [] }
+        },
+        {
+          id: '3', tipo: 'edificio_caido', nombre: 'Edificio Las Mercedes',
+          lat: 10.5050, lng: -66.8950,
+          informacion: { direccion: 'Calle 3', apoyo: ['grúa'], recogido: false, necesidades: ['Grúa', 'Voluntarios'] }
+        }
+      ];
+      localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
+      aplicarFiltros();
+    }
   }
-  aplicarFiltros();
 }
 
-function guardarPuntos() {
-  localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
+// --- GUARDAR PUNTOS EN SUPABASE (UPSERT) ---
+async function guardarPuntos() {
+  try {
+    for (const punto of todosLosPuntos) {
+      const { error } = await supabase
+        .from('puntos')
+        .upsert({
+          id: punto.id,
+          tipo: punto.tipo,
+          nombre: punto.nombre,
+          lat: punto.lat,
+          lng: punto.lng,
+          informacion: punto.informacion
+        }, { onConflict: 'id' });
+      if (error) throw error;
+    }
+    localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
+    console.log('✅ Datos sincronizados con Supabase');
+  } catch (error) {
+    console.error('❌ Error al guardar en Supabase:', error);
+    localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
+    alert('⚠️ Datos guardados solo localmente (falló la nube)');
+  }
 }
 
+// --- APLICAR FILTROS ---
 function aplicarFiltros() {
   const filtrados = filtroActivo === 'todos'
     ? todosLosPuntos
@@ -284,6 +332,7 @@ function aplicarFiltros() {
   }
 }
 
+// --- MOSTRAR PUNTOS EN EL MAPA ---
 function mostrarPuntos(puntos) {
   markersLayer.clearLayers();
   puntos.forEach(p => {
@@ -430,23 +479,48 @@ function mostrarPuntos(puntos) {
   });
 }
 
-// --- FUNCIONES ADMIN ---
-function marcarRecogido(id) {
+// --- FUNCIONES ADMIN (con Supabase) ---
+async function marcarRecogido(id) {
   const punto = todosLosPuntos.find(p => p.id === id);
   if (!punto || punto.tipo !== 'edificio_caido' || punto.informacion.recogido) return;
+  
   punto.informacion.recogido = true;
-  guardarPuntos();
-  aplicarFiltros();
-  alert('✅ Edificio marcado como recogido y limpiado. ¡Gracias!');
+  
+  try {
+    const { error } = await supabase
+      .from('puntos')
+      .update({ informacion: punto.informacion })
+      .eq('id', id);
+    if (error) throw error;
+    
+    localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
+    aplicarFiltros();
+    alert('✅ Edificio marcado como recogido (guardado en la nube)');
+  } catch (error) {
+    console.error('❌ Error al actualizar:', error);
+    alert('❌ Error al guardar en la nube. Intenta de nuevo.');
+  }
 }
 
-function eliminarPunto(id) {
+async function eliminarPunto(id) {
   if (!modoAdmin) return alert('🔐 Solo el administrador puede eliminar puntos.');
-  if (!confirm('¿Seguro que quieres eliminar este punto de interés de forma permanente?')) return;
-  todosLosPuntos = todosLosPuntos.filter(p => p.id !== id);
-  guardarPuntos();
-  aplicarFiltros();
-  alert('🗑️ Punto eliminado.');
+  if (!confirm('¿Seguro que quieres eliminar este punto de forma permanente?')) return;
+  
+  try {
+    const { error } = await supabase
+      .from('puntos')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    
+    todosLosPuntos = todosLosPuntos.filter(p => p.id !== id);
+    localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
+    aplicarFiltros();
+    alert('🗑️ Punto eliminado de la nube y del dispositivo.');
+  } catch (error) {
+    console.error('❌ Error al eliminar:', error);
+    alert('❌ Error al eliminar de la nube. Intenta de nuevo.');
+  }
 }
 
 // --- GEOLOCALIZACIÓN ---
@@ -480,8 +554,8 @@ function calcularDistancia(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 // ============================================================
-// MAPAVIDA - APP COMPLETA (BLOQUE 2)
-// INTERACCIÓN, MENÚ, FORMULARIOS, GUARDAR
+// MAPAVIDA - BLOQUE 2
+// INTERACCIÓN, MENÚ, FORMULARIOS, GUARDAR, BUSCADOR, FILTROS
 // ============================================================
 
 // --- SELECCIÓN EN EL MAPA ---
@@ -493,7 +567,10 @@ function activarSeleccion() {
 function desactivarSeleccion() {
   map.getContainer().style.cursor = '';
   map.off('click', onMapClick);
-  if (markerSeleccion) { map.removeLayer(markerSeleccion); markerSeleccion = null; }
+  if (markerSeleccion) { 
+    map.removeLayer(markerSeleccion); 
+    markerSeleccion = null; 
+  }
   ubicacionSeleccionada = null;
   puntoEnEdicion = null;
 }
@@ -504,6 +581,7 @@ function onMapClick(e) {
   ubicacionSeleccionada = { lat, lng };
   fLatDisplay.textContent = lat.toFixed(6);
   fLngDisplay.textContent = lng.toFixed(6);
+  
   if (markerSeleccion) map.removeLayer(markerSeleccion);
   markerSeleccion = L.marker([lat, lng], {
     icon: L.divIcon({
@@ -511,6 +589,7 @@ function onMapClick(e) {
       iconSize: [20, 20]
     })
   }).addTo(map);
+  
   map.off('click', onMapClick);
   map.getContainer().style.cursor = '';
   mostrarFormulario(tipoSeleccionado);
@@ -529,12 +608,17 @@ const btnGuardar = document.getElementById('btnGuardar');
 const btnEliminar = document.getElementById('btnEliminar');
 const btnCancelar = document.getElementById('btnCancelar');
 
+// --- MOSTRAR/OCULTAR MENÚ ---
 btnAgregar.addEventListener('click', function(e) {
   e.stopPropagation();
   menuOpciones.style.display = (menuOpciones.style.display === 'flex') ? 'none' : 'flex';
 });
-document.addEventListener('click', function() { menuOpciones.style.display = 'none'; });
 
+document.addEventListener('click', function() { 
+  menuOpciones.style.display = 'none'; 
+});
+
+// --- BOTÓN ADMINISTRADOR ---
 btnAdmin.addEventListener('click', function() {
   const pass = prompt('Ingresa la contraseña de administrador:');
   if (pass === ADMIN_PASSWORD) {
@@ -549,15 +633,18 @@ btnAdmin.addEventListener('click', function() {
   }
 });
 
+// --- SELECCIONAR TIPO DEL MENÚ ---
 document.querySelectorAll('#menuOpciones button').forEach(btn => {
   btn.addEventListener('click', function(e) {
     e.stopPropagation();
     const tipo = this.dataset.tipo;
     const config = TIPOS[tipo];
+    
     if (config.requiereAdmin && !modoAdmin) {
       alert('🔐 Este tipo de punto solo puede ser agregado por el administrador. Activa el modo admin con la contraseña.');
       return;
     }
+    
     tipoSeleccionado = tipo;
     menuOpciones.style.display = 'none';
     activarSeleccion();
@@ -566,11 +653,14 @@ document.querySelectorAll('#menuOpciones button').forEach(btn => {
   });
 });
 
+// --- MOSTRAR FORMULARIO PARA NUEVO PUNTO ---
 function mostrarFormulario(tipo) {
   const config = TIPOS[tipo];
   if (!config) return;
+  
   formTitulo.innerHTML = `${config.icono} ${config.label}`;
   let html = '';
+  
   config.campos.forEach(campo => {
     let input = '';
     if (campo.type === 'textarea') {
@@ -584,27 +674,40 @@ function mostrarFormulario(tipo) {
     }
     html += `<label>${campo.label}</label>${input}`;
   });
+  
   camposDinamicos.innerHTML = html;
   formulario.style.display = 'block';
   btnEliminar.style.display = 'none';
   puntoEnEdicion = null;
 }
 
-// --- GUARDAR ---
-btnGuardar.addEventListener('click', function() {
-  if (!tipoSeleccionado) { alert('Selecciona un tipo primero'); return; }
-  if (!ubicacionSeleccionada) { alert('Toca el mapa para seleccionar ubicación'); return; }
+// --- GUARDAR NUEVO PUNTO ---
+btnGuardar.addEventListener('click', async function() {
+  if (!tipoSeleccionado) { 
+    alert('Selecciona un tipo primero'); 
+    return; 
+  }
+  if (!ubicacionSeleccionada) { 
+    alert('Toca el mapa para seleccionar ubicación'); 
+    return; 
+  }
 
   const config = TIPOS[tipoSeleccionado];
   const datos = {};
   let valido = true;
+  
   config.campos.forEach(campo => {
     const el = document.getElementById(`campo_${campo.id}`);
     if (!el) return;
     const valor = el.value.trim();
-    if (campo.required && !valor) { alert(`El campo "${campo.label}" es obligatorio`); valido = false; return; }
+    if (campo.required && !valor) { 
+      alert(`El campo "${campo.label}" es obligatorio`); 
+      valido = false; 
+      return; 
+    }
     datos[campo.id] = valor;
   });
+  
   if (!valido) return;
 
   const informacion = config.procesar(datos);
@@ -620,8 +723,9 @@ btnGuardar.addEventListener('click', function() {
   };
 
   todosLosPuntos.push(nuevoPunto);
-  guardarPuntos();
-  alert('✅ Punto guardado localmente');
+  await guardarPuntos(); // Guardar en Supabase
+  
+  alert('✅ Punto guardado en la nube');
   formulario.style.display = 'none';
   desactivarSeleccion();
   ubicacionSeleccionada = null;
@@ -630,51 +734,114 @@ btnGuardar.addEventListener('click', function() {
 
 // --- CANCELAR ---
 btnCancelar.addEventListener('click', function() {
+  // Verificar si hay un formulario de voluntario abierto
   const btnRegistro = document.getElementById('btnRegistrarVoluntario');
-  if (btnRegistro) return;
+  if (btnRegistro) {
+    document.getElementById('btnCancelarVoluntario').click();
+    return;
+  }
+  
+  // Verificar si hay un formulario de edición abierto
   const btnEdicion = document.getElementById('btnGuardarEdicion');
   if (btnEdicion) {
     document.getElementById('btnCancelarEdicion').click();
     return;
   }
+  
+  // Verificar si hay un formulario de envío abierto
+  const btnEnvio = document.getElementById('btnCrearEnvio');
+  if (btnEnvio) {
+    document.getElementById('btnCancelarEnvio').click();
+    return;
+  }
+  
+  // Verificar si hay un formulario de incidencia abierto
+  const btnIncidencia = document.getElementById('btnGuardarIncidencia');
+  if (btnIncidencia) {
+    document.getElementById('btnCancelarIncidencia').click();
+    return;
+  }
+  
   formulario.style.display = 'none';
   desactivarSeleccion();
   ubicacionSeleccionada = null;
 });
 
-// --- BUSCADOR ---
+// --- BUSCADOR (Nominatim) ---
 document.getElementById('btnBuscar').addEventListener('click', async function() {
   const query = document.getElementById('buscador').value.trim();
   if (!query) return;
+  
   try {
-    const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=ve`);
+    const resp = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=ve`
+    );
     const data = await resp.json();
-    if (data.length === 0) { alert('No se encontraron resultados'); return; }
+    
+    if (data.length === 0) { 
+      alert('No se encontraron resultados'); 
+      return; 
+    }
+    
     const r = data[0];
     const lat = parseFloat(r.lat);
     const lon = parseFloat(r.lon);
+    
     map.setView([lat, lon], 15);
-    L.marker([lat, lon]).addTo(map).bindPopup(`📍 ${r.display_name}`).openPopup();
+    L.marker([lat, lon])
+      .addTo(map)
+      .bindPopup(`📍 ${r.display_name}`)
+      .openPopup();
+      
   } catch (e) {
     alert('Error al buscar: ' + e.message);
   }
 });
+
+// Buscar al presionar Enter
 document.getElementById('buscador').addEventListener('keypress', function(e) {
-  if (e.key === 'Enter') document.getElementById('btnBuscar').click();
+  if (e.key === 'Enter') {
+    document.getElementById('btnBuscar').click();
+  }
 });
 
 // --- FILTROS ---
 document.querySelectorAll('#filtros .filtro-btn').forEach(btn => {
   btn.addEventListener('click', function() {
-    document.querySelectorAll('#filtros .filtro-btn').forEach(b => b.classList.remove('activo'));
+    // Desactivar todos los filtros
+    document.querySelectorAll('#filtros .filtro-btn').forEach(b => {
+      b.classList.remove('activo');
+    });
+    
+    // Activar el filtro seleccionado
     this.classList.add('activo');
     filtroActivo = this.dataset.tipo;
     aplicarFiltros();
   });
 });
+
+// --- FUNCIÓN PARA ACTUALIZAR LA INTERFAZ DESPUÉS DE GUARDAR ---
+// Esta función es llamada desde otros bloques después de guardar cambios
+async function actualizarInterfaz() {
+  await cargarPuntos();
+  aplicarFiltros();
+}
+
+// --- INICIALIZACIÓN DEL BOTÓN ADMIN ---
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('btnAdmin').style.display = 'block';
+});
+
+// --- INICIALIZACIÓN DE LA APP ---
+// Las funciones cargarPuntos() y obtenerUbicacion() se llaman desde el final del Bloque 1
+// Pero por si acaso, las llamamos aquí también (si no se llamaron antes)
+if (typeof cargarPuntos === 'function' && typeof obtenerUbicacion === 'function') {
+  // Ya se llaman desde el Bloque 1
+  console.log('✅ Bloque 2 cargado correctamente');
+}
 // ============================================================
-// MAPAVIDA - APP COMPLETA (BLOQUE 3)
-// VOLUNTARIADO INFANTIL, NAVEGACIÓN, EDICIÓN DE PUNTOS
+// MAPAVIDA - BLOQUE 3
+// VOLUNTARIADO INFANTIL, NAVEGACIÓN Y EDICIÓN DE PUNTOS
 // ============================================================
 
 // --- VOLUNTARIO INFANTIL ---
@@ -716,7 +883,7 @@ function mostrarFormularioVoluntarioInfantil(puntoId) {
   btnEliminar.style.display = 'none';
   btnCancelar.style.display = 'none';
 
-  document.getElementById('btnRegistrarVoluntario').addEventListener('click', function() {
+  document.getElementById('btnRegistrarVoluntario').addEventListener('click', async function() {
     const nombre = document.getElementById('v_nombre').value.trim();
     const cedula = document.getElementById('v_cedula').value.trim();
     const foto_cedula = document.getElementById('v_foto_cedula').value.trim();
@@ -733,8 +900,13 @@ function mostrarFormularioVoluntarioInfantil(puntoId) {
     const punto = todosLosPuntos.find(p => p.id === puntoId);
     if (!punto) return;
     if (!punto.informacion.voluntarios_infantiles) punto.informacion.voluntarios_infantiles = [];
-    punto.informacion.voluntarios_infantiles.push({ nombre, cedula, foto_cedula, foto_personal, telefono, rol, mensaje });
-    guardarPuntos();
+    punto.informacion.voluntarios_infantiles.push({ 
+      nombre, cedula, foto_cedula, foto_personal, telefono, rol, mensaje 
+    });
+    
+    // Guardar en Supabase
+    await guardarPuntos();
+    
     alert('✅ Te has registrado como voluntario para actividades infantiles. ¡Gracias por tu ayuda!');
     formulario.style.display = 'none';
     btnGuardar.style.display = 'block';
@@ -777,18 +949,32 @@ function trazarRuta(origen, destino, nombreDestino) {
     waypoints: [L.latLng(origen.lat, origen.lng), L.latLng(destino.lat, destino.lng)],
     routeWhileDragging: true,
     showAlternatives: false,
-    lineOptions: { styles: [{ color: '#E53935', weight: 5, opacity: 0.8 }], extendToWaypoints: false, missingRouteTolerance: 0 },
-    altLineOptions: { styles: [{ color: '#1976D2', weight: 3, opacity: 0.4 }] },
-    router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' }),
+    lineOptions: { 
+      styles: [{ color: '#E53935', weight: 5, opacity: 0.8 }], 
+      extendToWaypoints: false, 
+      missingRouteTolerance: 0 
+    },
+    altLineOptions: { 
+      styles: [{ color: '#1976D2', weight: 3, opacity: 0.4 }] 
+    },
+    router: L.Routing.osrmv1({ 
+      serviceUrl: 'https://router.project-osrm.org/route/v1' 
+    }),
     plan: L.Routing.plan([L.latLng(origen.lat, origen.lng), L.latLng(destino.lat, destino.lng)], {
       createMarker: function(i, wp) {
         if (i === 0) {
           return L.marker(wp.latLng, {
-            icon: L.divIcon({ html: '<div style="background:#1a73e8;border-radius:50%;width:16px;height:16px;border:3px solid white;box-shadow:0 0 10px rgba(26,115,232,0.6);"></div>', iconSize: [16, 16] })
+            icon: L.divIcon({ 
+              html: '<div style="background:#1a73e8;border-radius:50%;width:16px;height:16px;border:3px solid white;box-shadow:0 0 10px rgba(26,115,232,0.6);"></div>', 
+              iconSize: [16, 16] 
+            })
           }).bindPopup('📍 Origen');
         } else {
           return L.marker(wp.latLng, {
-            icon: L.divIcon({ html: `<div style="background:#E53935;border-radius:50%;width:20px;height:20px;border:3px solid white;box-shadow:0 0 10px rgba(229,57,53,0.6);display:flex;align-items:center;justify-content:center;font-size:12px;color:white;font-weight:bold;">🏁</div>`, iconSize: [20, 20] })
+            icon: L.divIcon({ 
+              html: `<div style="background:#E53935;border-radius:50%;width:20px;height:20px;border:3px solid white;box-shadow:0 0 10px rgba(229,57,53,0.6);display:flex;align-items:center;justify-content:center;font-size:12px;color:white;font-weight:bold;">🏁</div>`, 
+              iconSize: [20, 20] 
+            })
           }).bindPopup(`📍 ${nombreDestino}`);
         }
       }
@@ -805,6 +991,9 @@ function trazarRuta(origen, destino, nombreDestino) {
     document.getElementById('btnCancelarNavegacion').style.display = 'block';
   });
 
+  // Asegurar que el botón de cancelar solo se agregue una vez
+  const btnCancelar = document.getElementById('btnCancelarNavegacion');
+  btnCancelar.replaceWith(btnCancelar.cloneNode(true));
   document.getElementById('btnCancelarNavegacion').addEventListener('click', function() {
     cancelarNavegacion();
   });
@@ -826,6 +1015,7 @@ function mostrarFormularioEdicionPunto(puntoId) {
   const tipo = TIPOS[punto.tipo];
   if (!tipo) return;
 
+  // Cargar datos actuales
   const datosActuales = {};
   tipo.campos.forEach(campo => {
     datosActuales[campo.id] = punto.informacion[campo.id] || '';
@@ -857,6 +1047,7 @@ function mostrarFormularioEdicionPunto(puntoId) {
     html += `<label>${campo.label}</label>${input}`;
   });
 
+  // Campo dirección si no está en los campos del tipo
   if (!tipo.campos.find(c => c.id === 'direccion')) {
     html += `
       <label>Dirección</label>
@@ -880,7 +1071,7 @@ function mostrarFormularioEdicionPunto(puntoId) {
   btnEliminar.style.display = 'none';
   btnCancelar.style.display = 'none';
 
-  document.getElementById('btnGuardarEdicion').addEventListener('click', function() {
+  document.getElementById('btnGuardarEdicion').addEventListener('click', async function() {
     const datosEditados = {};
     let valido = true;
     tipo.campos.forEach(campo => {
@@ -897,6 +1088,8 @@ function mostrarFormularioEdicionPunto(puntoId) {
     if (!valido) return;
 
     const nuevaInformacion = tipo.procesar(datosEditados);
+    
+    // Mantener campos especiales que no deben perderse
     if (punto.informacion.voluntarios_infantiles) {
       nuevaInformacion.voluntarios_infantiles = punto.informacion.voluntarios_infantiles;
     }
@@ -906,15 +1099,19 @@ function mostrarFormularioEdicionPunto(puntoId) {
     if (punto.informacion.recogido !== undefined) {
       nuevaInformacion.recogido = punto.informacion.recogido;
     }
+    
     const dirEl = document.getElementById('edit_direccion');
     nuevaInformacion.direccion = dirEl ? dirEl.value.trim() : datosEditados.direccion || '';
 
+    // Actualizar el punto
     punto.informacion = nuevaInformacion;
     if (datosEditados.nombre) {
       punto.nombre = datosEditados.nombre;
     }
 
-    guardarPuntos();
+    // Guardar en Supabase
+    await guardarPuntos();
+    
     alert('✅ Punto actualizado exitosamente');
     formulario.style.display = 'none';
     btnGuardar.style.display = 'block';
@@ -929,8 +1126,8 @@ function mostrarFormularioEdicionPunto(puntoId) {
   });
 }
 // ============================================================
-// MAPAVIDA - APP COMPLETA (BLOQUE 4)
-// TRANSPORTE DE SUMINISTROS CON INCIDENCIAS
+// MAPAVIDA - BLOQUE 4
+// TRANSPORTE DE SUMINISTROS CON INCIDENCIAS (SUPABASE)
 // ============================================================
 
 function mostrarFormularioCrearEnvio(puntoId) {
@@ -1022,7 +1219,7 @@ function mostrarFormularioCrearEnvio(puntoId) {
 
     if (!punto.informacion.envios) punto.informacion.envios = [];
     punto.informacion.envios.push(nuevoEnvio);
-    guardarPuntos();
+    guardarPuntos(); // Ahora asíncrono con Supabase
     agregarMarcadorEnvio(nuevoEnvio);
 
     alert('✅ Envío creado exitosamente. El marcador aparecerá en el mapa.');
@@ -1105,13 +1302,16 @@ function agregarMarcadorEnvio(envio) {
   markersLayer.addLayer(marker);
 }
 
-function reportarIncidencia(envioId) {
+// --- REPORTAR INCIDENCIA (CON SUPABASE) ---
+async function reportarIncidencia(envioId) {
   let envioEncontrado = null;
+  let puntoPadre = null;
   for (const punto of todosLosPuntos) {
     if (punto.informacion?.envios) {
       const encontrado = punto.informacion.envios.find(e => e.id === envioId);
       if (encontrado) {
         envioEncontrado = encontrado;
+        puntoPadre = punto;
         break;
       }
     }
@@ -1148,7 +1348,7 @@ function reportarIncidencia(envioId) {
   btnEliminar.style.display = 'none';
   btnCancelar.style.display = 'none';
 
-  document.getElementById('btnGuardarIncidencia').addEventListener('click', function() {
+  document.getElementById('btnGuardarIncidencia').addEventListener('click', async function() {
     const titulo = document.getElementById('inc_titulo').value.trim();
     const descripcion = document.getElementById('inc_descripcion').value.trim();
     const asistencia = document.getElementById('inc_asistencia').value;
@@ -1168,19 +1368,29 @@ function reportarIncidencia(envioId) {
     if (!envioEncontrado.incidencias) envioEncontrado.incidencias = [];
     envioEncontrado.incidencias.push(incidencia);
     envioEncontrado.estado = 'incidencia';
-    guardarPuntos();
-
-    if (envioEncontrado._marker) {
-      markersLayer.removeLayer(envioEncontrado._marker);
-      envioEncontrado._marker = null;
-      agregarMarcadorEnvio(envioEncontrado);
+    
+    try {
+      const { error } = await supabase
+        .from('puntos')
+        .update({ informacion: puntoPadre.informacion })
+        .eq('id', puntoPadre.id);
+      if (error) throw error;
+      
+      localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
+      if (envioEncontrado._marker) {
+        markersLayer.removeLayer(envioEncontrado._marker);
+        envioEncontrado._marker = null;
+        agregarMarcadorEnvio(envioEncontrado);
+      }
+      alert('✅ Incidencia reportada (guardada en la nube)');
+      formulario.style.display = 'none';
+      btnGuardar.style.display = 'block';
+      btnCancelar.style.display = 'block';
+      aplicarFiltros();
+    } catch (error) {
+      console.error('❌ Error al guardar incidencia:', error);
+      alert('❌ Error al guardar en la nube. Intenta de nuevo.');
     }
-
-    alert('✅ Incidencia reportada. El centro de acopio recibirá la notificación.');
-    formulario.style.display = 'none';
-    btnGuardar.style.display = 'block';
-    btnCancelar.style.display = 'block';
-    aplicarFiltros();
   });
 
   document.getElementById('btnCancelarIncidencia').addEventListener('click', function() {
@@ -1190,13 +1400,16 @@ function reportarIncidencia(envioId) {
   });
 }
 
-function marcarEnvioEntregado(envioId) {
+// --- MARCAR ENVÍO COMO ENTREGADO (CON SUPABASE) ---
+async function marcarEnvioEntregado(envioId) {
   let envioEncontrado = null;
+  let puntoPadre = null;
   for (const punto of todosLosPuntos) {
     if (punto.informacion?.envios) {
       const encontrado = punto.informacion.envios.find(e => e.id === envioId);
       if (encontrado) {
         envioEncontrado = encontrado;
+        puntoPadre = punto;
         break;
       }
     }
@@ -1208,21 +1421,25 @@ function marcarEnvioEntregado(envioId) {
     envioEncontrado.estado = 'entregado';
     envioEncontrado.fechaEntrega = new Date().toLocaleString();
     envioEncontrado.ubicacionActual = { lat: envioEncontrado.destinoLat, lng: envioEncontrado.destinoLng };
-    guardarPuntos();
-    if (envioEncontrado._marker) {
-      markersLayer.removeLayer(envioEncontrado._marker);
-      envioEncontrado._marker = null;
-      agregarMarcadorEnvio(envioEncontrado);
+    
+    try {
+      const { error } = await supabase
+        .from('puntos')
+        .update({ informacion: puntoPadre.informacion })
+        .eq('id', puntoPadre.id);
+      if (error) throw error;
+      
+      localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
+      if (envioEncontrado._marker) {
+        markersLayer.removeLayer(envioEncontrado._marker);
+        envioEncontrado._marker = null;
+        agregarMarcadorEnvio(envioEncontrado);
+      }
+      alert('✅ Envío marcado como entregado (guardado en la nube)');
+      aplicarFiltros();
+    } catch (error) {
+      console.error('❌ Error al actualizar:', error);
+      alert('❌ Error al guardar en la nube. Intenta de nuevo.');
     }
-    alert('✅ Envío marcado como entregado. ¡Gracias por tu servicio!');
-    aplicarFiltros();
   }
 }
-
-// --- INICIO ---
-document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('btnAdmin').style.display = 'block';
-});
-cargarPuntos();
-obtenerUbicacion();
-console.log('✅ App completa con definiciones, protección infantil, navegación, edición y transporte de suministros');
