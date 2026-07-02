@@ -267,6 +267,99 @@
     }
     #btnCancelarNavegacion:active { transform: scale(0.95); }
 
+    /* Panel de lista */
+    #panelLista {
+      display: none;
+      position: fixed;
+      top: 80px;
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      z-index: 9000;
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      overflow-y: auto;
+      flex-direction: column;
+    }
+    #panelLista .header-lista {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    #panelLista .header-lista h2 { margin: 0; }
+    #panelLista .header-lista button {
+      background: #d32f2f;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    #contenedorContadores {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    #contenedorContadores span {
+      background: #f0f0f0;
+      padding: 4px 10px;
+      border-radius: 16px;
+      font-size: 13px;
+      font-weight: bold;
+    }
+    .item-lista {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      margin-bottom: 4px;
+      border-radius: 4px;
+    }
+    .item-lista:hover { background: #f5f5f5; }
+
+    /* Panel de detalle */
+    #panelDetalle {
+      display: none;
+      position: fixed;
+      top: 80px;
+      right: 10px;
+      width: 380px;
+      bottom: 10px;
+      z-index: 9500;
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      overflow-y: auto;
+      flex-direction: column;
+    }
+    @media (max-width: 480px) {
+      #panelDetalle { width: calc(100% - 20px); right: 10px; }
+    }
+    #panelDetalle .header-detalle {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    #panelDetalle .header-detalle h3 { margin: 0; }
+    #panelDetalle .header-detalle button {
+      background: #666;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
     #cargando {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -305,15 +398,18 @@
     <div>Cargando mapa...</div>
   </div>
 
+  <!-- PANEL SUPERIOR -->
   <div id="panelSuperior">
     <input type="text" id="buscador" placeholder="Buscar ubicación (ej: Los Rosales, Caracas)" />
     <button id="btnBuscar">🔍 Buscar</button>
+    <button id="btnVerLista">📋 Lista de puntos</button>
     <div id="filtros">
       <button class="filtro-btn activo" data-tipo="todos">✅ Todos</button>
       <button class="filtro-btn" data-tipo="refugio"><span class="color-bola" style="background:#2E7D32;"></span> Refugio</button>
       <button class="filtro-btn" data-tipo="centro_acopio"><span class="color-bola" style="background:#F57C00;"></span> Centro de acopio</button>
       <button class="filtro-btn" data-tipo="hospital"><span class="color-bola" style="background:#1976D2;"></span> Hospital</button>
       <button class="filtro-btn" data-tipo="edificio_caido"><span class="color-bola" style="background:#C62828;"></span> Edificio caído</button>
+      <button class="filtro-btn" data-tipo="edificio_recogido"><span class="color-bola" style="background:#757575;"></span> Recogidos</button>
       <button class="filtro-btn" data-tipo="peligro_derrumbe"><span class="color-bola" style="background:#E65100;"></span> Peligro de derrumbe</button>
       <button class="filtro-btn" data-tipo="sin_inspeccionar"><span class="color-bola" style="background:#6A1B9A;"></span> Sin inspeccionar</button>
       <button class="filtro-btn" data-tipo="veterinaria"><span class="color-bola" style="background:#00897B;"></span> Atención veterinaria</button>
@@ -322,8 +418,10 @@
     </div>
   </div>
 
+  <!-- MAPA -->
   <div id="map"></div>
 
+  <!-- MENÚ FLOTANTE -->
   <div id="menuContainer">
     <div id="menuOpciones">
       <button data-tipo="refugio"><span class="color-bola" style="background:#2E7D32;width:14px;height:14px;"></span> 🏠 Refugio</button>
@@ -340,6 +438,7 @@
     <button id="btnAgregar">➕ Agregar</button>
   </div>
 
+  <!-- FORMULARIO -->
   <div id="formulario">
     <h3 id="formTitulo">📝 Nuevo punto</h3>
     <div id="camposDinamicos"></div>
@@ -352,6 +451,26 @@
     <button id="btnCancelar">❌ Cancelar</button>
   </div>
 
+  <!-- PANEL DE LISTA -->
+  <div id="panelLista">
+    <div class="header-lista">
+      <h2>📋 Todos los puntos</h2>
+      <button id="btnCerrarLista">✖ Cerrar</button>
+    </div>
+    <div id="contenedorContadores"></div>
+    <div id="contenedorLista"></div>
+  </div>
+
+  <!-- PANEL DE DETALLE -->
+  <div id="panelDetalle">
+    <div class="header-detalle">
+      <h3 id="detalleTitulo">Detalle</h3>
+      <button id="btnCerrarDetalle">✖</button>
+    </div>
+    <div id="contenidoDetalle"></div>
+  </div>
+
+  <!-- BOTÓN CANCELAR NAVEGACIÓN -->
   <button id="btnCancelarNavegacion">✖ Cancelar navegación</button>
 
   <script src="app.js"></script>
