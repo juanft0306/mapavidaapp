@@ -502,6 +502,35 @@
       font-weight: bold;
     }
 
+    /* ===== BOTÓN MINIMIZAR ===== */
+    .btn-minimizar {
+      background: rgba(255,255,255,0.3);
+      border: none;
+      color: #333;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    .btn-minimizar:hover { background: rgba(255,255,255,0.5); }
+
+    /* Estado minimizado de los paneles */
+    .panel-minimizado {
+      height: 50px !important;
+      min-height: 50px !important;
+      overflow: hidden !important;
+      cursor: pointer;
+    }
+    .panel-minimizado .panel-contenido {
+      display: none !important;
+    }
+    .panel-minimizado .header-lista,
+    .panel-minimizado .header-detalle,
+    .panel-minimizado .header-urgencias {
+      cursor: pointer;
+    }
+
     /* ===== CHAT ===== */
     #panelChat {
       display: none;
@@ -601,7 +630,7 @@
       z-index: 7000 !important;
     }
     .leaflet-routing-container .leaflet-routing-alt {
-      padding: 4px 8px; 
+      padding: 4px 8px;
     }
     .leaflet-routing-container .leaflet-routing-alt tr td {
       padding: 2px 4px;
@@ -808,47 +837,58 @@
     <button id="btnCerrarSeguridad" style="margin-top:6px;background:#666;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">❌ Cerrar</button>
   </div>
 
-  <!-- PANEL DE LISTA -->
+  <!-- PANEL DE LISTA (con botón minimizar) -->
   <div id="panelLista">
     <div class="header-lista">
       <h2>📋 Todos los puntos</h2>
-      <button id="btnCerrarLista">✖ Cerrar</button>
+      <div>
+        <button class="btn-minimizar" id="btnMinimizarLista">➖</button>
+        <button id="btnCerrarLista">✖ Cerrar</button>
+      </div>
     </div>
-    <div id="filtrosLista">
-      <button class="activo" data-tipo="todos">Todos</button>
-      <button data-tipo="urgentes">🚨 Urgentes</button>
-      <button data-tipo="recogidos">✅ Recogidos</button>
-      <button data-tipo="no_recogidos">⏳ Pendientes</button>
-      <button data-tipo="refugio">🏠 Refugio</button>
-      <button data-tipo="centro_acopio">📦 Acopio</button>
-      <button data-tipo="hospital">🏥 Hospital</button>
-      <button data-tipo="edificio_caido">💥 Caído</button>
-      <button data-tipo="peligro_derrumbe">⚠️ Derrumbe</button>
-      <button data-tipo="sin_inspeccionar">❓ Sin insp.</button>
-      <button data-tipo="veterinaria">🐾 Veterinaria</button>
-      <button data-tipo="ayuda_psicologica">🧠 Psicología</button>
-      <button data-tipo="vacuna_tetanos">💉 Vacuna</button>
+    <div class="panel-contenido">
+      <div id="filtrosLista">
+        <button class="activo" data-tipo="todos">Todos</button>
+        <button data-tipo="urgentes">🚨 Urgentes</button>
+        <button data-tipo="recogidos">✅ Recogidos</button>
+        <button data-tipo="no_recogidos">⏳ Pendientes</button>
+        <button data-tipo="refugio">🏠 Refugio</button>
+        <button data-tipo="centro_acopio">📦 Acopio</button>
+        <button data-tipo="hospital">🏥 Hospital</button>
+        <button data-tipo="edificio_caido">💥 Caído</button>
+        <button data-tipo="peligro_derrumbe">⚠️ Derrumbe</button>
+        <button data-tipo="sin_inspeccionar">❓ Sin insp.</button>
+        <button data-tipo="veterinaria">🐾 Veterinaria</button>
+        <button data-tipo="ayuda_psicologica">🧠 Psicología</button>
+        <button data-tipo="vacuna_tetanos">💉 Vacuna</button>
+      </div>
+      <div id="contenedorContadores"></div>
+      <div id="contenedorLista"></div>
     </div>
-    <div id="contenedorContadores"></div>
-    <div id="contenedorLista"></div>
   </div>
 
-  <!-- PANEL DE DETALLE -->
+  <!-- PANEL DE DETALLE (con botón minimizar) -->
   <div id="panelDetalle">
     <div class="header-detalle">
       <h3 id="detalleTitulo">Detalle</h3>
-      <button id="btnCerrarDetalle">✖</button>
+      <div>
+        <button class="btn-minimizar" id="btnMinimizarDetalle">➖</button>
+        <button id="btnCerrarDetalle">✖</button>
+      </div>
     </div>
-    <div id="contenidoDetalle"></div>
+    <div class="panel-contenido" id="contenidoDetalle"></div>
   </div>
 
-  <!-- PANEL DE URGENCIAS -->
+  <!-- PANEL DE URGENCIAS (con botón minimizar) -->
   <div id="panelUrgencias">
     <div class="header-urgencias">
       <h2>🚨 Urgencias</h2>
-      <button id="btnCerrarUrgencias">✖ Cerrar</button>
+      <div>
+        <button class="btn-minimizar" id="btnMinimizarUrgencias">➖</button>
+        <button id="btnCerrarUrgencias">✖ Cerrar</button>
+      </div>
     </div>
-    <div id="contenedorUrgencias"></div>
+    <div class="panel-contenido" id="contenedorUrgencias"></div>
   </div>
 
   <!-- CHAT -->
@@ -869,4 +909,4 @@
 
   <script src="app.js"></script>
 </body>
-    </html>
+</html>
