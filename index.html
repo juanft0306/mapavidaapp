@@ -502,35 +502,6 @@
       font-weight: bold;
     }
 
-    /* ===== BOTÓN MINIMIZAR ===== */
-    .btn-minimizar {
-      background: rgba(255,255,255,0.3);
-      border: none;
-      color: #333;
-      padding: 4px 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
-      font-size: 16px;
-    }
-    .btn-minimizar:hover { background: rgba(255,255,255,0.5); }
-
-    /* Estado minimizado de los paneles */
-    .panel-minimizado {
-      height: 50px !important;
-      min-height: 50px !important;
-      overflow: hidden !important;
-      cursor: pointer;
-    }
-    .panel-minimizado .panel-contenido {
-      display: none !important;
-    }
-    .panel-minimizado .header-lista,
-    .panel-minimizado .header-detalle,
-    .panel-minimizado .header-urgencias {
-      cursor: pointer;
-    }
-
     /* ===== CHAT ===== */
     #panelChat {
       display: none;
@@ -827,26 +798,20 @@
     <label>Contraseña maestra *</label>
     <input type="password" id="inputMasterPassword" placeholder="Ingresa la contraseña maestra" required />
     <label>Nueva contraseña (7 dígitos alfanuméricos) *</label>
-    <div style="display:flex;gap:8px;align-items:center;">
-      <input type="password" id="inputNuevaPassword" placeholder="Ej: A1B2C3D" maxlength="7" required style="flex:1;" />
-      <button id="btnGenerarPassword" style="background:#1a237e;color:white;border:none;padding:8px 12px;border-radius:6px;cursor:pointer;font-weight:bold;white-space:nowrap;font-size:13px;">🎲 Generar</button>
-    </div>
+    <input type="password" id="inputNuevaPassword" placeholder="Ej: A1B2C3D" maxlength="7" required />
     <label>Confirmar nueva contraseña *</label>
     <input type="password" id="inputConfirmPassword" placeholder="Repite la nueva contraseña" maxlength="7" required />
     <button id="btnCambiarPassword" style="margin-top:12px;background:#d32f2f;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">🔄 Cambiar contraseña</button>
     <button id="btnCerrarSeguridad" style="margin-top:6px;background:#666;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">❌ Cerrar</button>
   </div>
 
-  <!-- PANEL DE LISTA (con botón minimizar) -->
+  <!-- PANEL DE LISTA -->
   <div id="panelLista">
     <div class="header-lista">
       <h2>📋 Todos los puntos</h2>
-      <div>
-        <button class="btn-minimizar" id="btnMinimizarLista">➖</button>
-        <button id="btnCerrarLista">✖ Cerrar</button>
-      </div>
+      <button id="btnCerrarLista">✖ Cerrar</button>
     </div>
-    <div class="panel-contenido">
+    <div>
       <div id="filtrosLista">
         <button class="activo" data-tipo="todos">Todos</button>
         <button data-tipo="urgentes">🚨 Urgentes</button>
@@ -867,28 +832,22 @@
     </div>
   </div>
 
-  <!-- PANEL DE DETALLE (con botón minimizar) -->
+  <!-- PANEL DE DETALLE -->
   <div id="panelDetalle">
     <div class="header-detalle">
       <h3 id="detalleTitulo">Detalle</h3>
-      <div>
-        <button class="btn-minimizar" id="btnMinimizarDetalle">➖</button>
-        <button id="btnCerrarDetalle">✖</button>
-      </div>
+      <button id="btnCerrarDetalle">✖</button>
     </div>
-    <div class="panel-contenido" id="contenidoDetalle"></div>
+    <div id="contenidoDetalle"></div>
   </div>
 
-  <!-- PANEL DE URGENCIAS (con botón minimizar) -->
+  <!-- PANEL DE URGENCIAS -->
   <div id="panelUrgencias">
     <div class="header-urgencias">
       <h2>🚨 Urgencias</h2>
-      <div>
-        <button class="btn-minimizar" id="btnMinimizarUrgencias">➖</button>
-        <button id="btnCerrarUrgencias">✖ Cerrar</button>
-      </div>
+      <button id="btnCerrarUrgencias">✖ Cerrar</button>
     </div>
-    <div class="panel-contenido" id="contenedorUrgencias"></div>
+    <div id="contenedorUrgencias"></div>
   </div>
 
   <!-- CHAT -->
