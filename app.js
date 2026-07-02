@@ -155,16 +155,16 @@ function aplicarFiltros() {
     ? todosLosPuntos
     : todosLosPuntos.filter(p => p.tipo === filtroActivo);
   mostrarPuntos(filtrados);
-  // Si hay ubicación del usuario, recalcular distancias y recomendar
-  if (ubicacionUsuario) {
+  // Recomendación de los 5 más cercanos (si hay ubicación)
+  if (ubicacionUsuario && filtrados.length > 0) {
     const conDistancia = filtrados.map(p => ({
       ...p,
       distancia: calcularDistancia(ubicacionUsuario.lat, ubicacionUsuario.lng, p.lat, p.lng)
     }));
     conDistancia.sort((a,b) => a.distancia - b.distancia);
     const cercanos = conDistancia.slice(0, 5);
-    // Mostrar recomendación en la consola (puedes adaptarlo)
     console.log('📍 Más cercanos:', cercanos.map(p => `${p.nombre} (${p.distancia.toFixed(2)} km)`));
+    // Podrías mostrar esto en un panel flotante si lo deseas
   }
 }
 
@@ -184,7 +184,6 @@ function mostrarPuntos(puntos) {
       ${p.informacion?.direccion ? p.informacion.direccion + '<br>' : ''}
       ${tipo.popup(p.informacion || {})}
     `;
-    // Si hay ubicación del usuario, mostrar distancia
     if (ubicacionUsuario) {
       const dist = calcularDistancia(ubicacionUsuario.lat, ubicacionUsuario.lng, p.lat, p.lng);
       popupContent += `<div class="popup-distancia">📍 ${dist.toFixed(2)} km de ti</div>`;
