@@ -1,5 +1,5 @@
 // ============================================================
-// MAPAVIDA - BLOQUE 1 (CONFIGURACIÓN, VARIABLES Y TIPOS)
+// MAPAVIDA - BLOQUE 1 (CONFIGURACIÓN, DEFINICIONES Y TIPOS)
 // ============================================================
 
 const ADMIN_PASSWORD = 'MapaVida2026';
@@ -25,6 +25,9 @@ let modoNavegacion = false;
 
 document.getElementById('cargando').style.display = 'none';
 
+// ============================================================
+// DEFINICIONES
+// ============================================================
 const DEFINICIONES = {
   edificio_caido: 'Estructura que ya colapsó total o parcialmente. No ingresar. Necesita maquinaria y personal especializado para remover escombros.',
   peligro_derrumbe: 'Estructura con daños estructurales visibles (grietas, inclinación, etc.) que podría colapsar en cualquier momento. Manténgase alejado.',
@@ -37,6 +40,9 @@ const DEFINICIONES = {
   vacuna_tetanos: 'Punto de vacunación contra el tétano (enfermedad grave por heridas con objetos contaminados).'
 };
 
+// ============================================================
+// TIPOS DE PUNTOS (CON URGENCIA)
+// ============================================================
 const TIPOS = {
   refugio: {
     label: 'Refugio', color: '#2E7D32', icono: '🏠', requiereAdmin: false,
@@ -45,11 +51,13 @@ const TIPOS = {
       { id: 'nombre', label: 'Nombre del refugio *', type: 'text', required: true },
       { id: 'direccion', label: 'Dirección', type: 'text', required: false },
       { id: 'cupo', label: 'Cupo disponible (personas)', type: 'number', required: false },
+      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'necesidad_infantil', label: '¿Necesitan actividades recreativas o cuidado para niños?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'necesidades', label: 'Necesidades detalladas (una por línea)', type: 'textarea', required: false }
     ],
     procesar: (d) => ({
       cupo: parseInt(d.cupo) || 0,
+      urgente: d.urgente === 'Sí',
       necesidad_infantil: d.necesidad_infantil === 'Sí',
       necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : [],
       voluntarios_infantiles: []
@@ -68,6 +76,7 @@ const TIPOS = {
     campos: [
       { id: 'nombre', label: 'Nombre del centro *', type: 'text', required: true },
       { id: 'direccion', label: 'Dirección', type: 'text', required: false },
+      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'necesarios', label: 'Insumos necesarios (separados por comas)', type: 'textarea', required: false },
       { id: 'suficientes', label: 'Insumos que YA NO necesitan (separados por comas)', type: 'textarea', required: false },
       { id: 'necesidad_infantil', label: '¿Necesitan actividades recreativas o cuidado para niños?', type: 'select', options: ['No', 'Sí'], required: false },
@@ -76,6 +85,7 @@ const TIPOS = {
     procesar: (d) => ({
       necesita: d.necesarios ? d.necesarios.split(',').map(s => s.trim()).filter(Boolean) : [],
       suficientes: d.suficientes ? d.suficientes.split(',').map(s => s.trim()).filter(Boolean) : [],
+      urgente: d.urgente === 'Sí',
       necesidad_infantil: d.necesidad_infantil === 'Sí',
       necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : [],
       voluntarios_infantiles: [],
@@ -83,7 +93,6 @@ const TIPOS = {
     }),
     popupDetalle: (info) => {
       let html = '';
-      if (info.necesita?.length) html += `<div class="popup-info">⚠️ Necesitan: ${info.necesita.join(', ')}</div>`;
       if (info.suficientes?.length) html += `<div class="popup-info" style="color:#2e7d32;">✅ Ya no necesitan: ${info.suficientes.join(', ')}</div>`;
       if (info.necesidad_infantil) {
         html += `<div class="popup-info" style="color:#FF6F00;">🧸 Necesitan recreación/cuidado para niños</div>`;
@@ -97,6 +106,7 @@ const TIPOS = {
     campos: [
       { id: 'nombre', label: 'Nombre del hospital *', type: 'text', required: true },
       { id: 'direccion', label: 'Dirección', type: 'text', required: false },
+      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'medicamentos', label: 'Medicamentos necesarios (separados por comas)', type: 'textarea', required: false },
       { id: 'sangre', label: '¿Necesitan donaciones de sangre?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'necesidades', label: 'Necesidades detalladas (una por línea)', type: 'textarea', required: false }
@@ -104,6 +114,7 @@ const TIPOS = {
     procesar: (d) => ({
       medicamentos: d.medicamentos ? d.medicamentos.split(',').map(s => s.trim()).filter(Boolean) : [],
       necesita_sangre: d.sangre === 'Sí',
+      urgente: d.urgente === 'Sí',
       necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []
     }),
     popupDetalle: (info) => {
@@ -119,16 +130,17 @@ const TIPOS = {
     campos: [
       { id: 'nombre', label: 'Ubicación / referencia *', type: 'text', required: true },
       { id: 'apoyo', label: '¿Qué apoyo necesitan? (ej: agua, comida, escombros)', type: 'textarea', required: false },
+      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'necesidades', label: 'Necesidades detalladas (una por línea)', type: 'textarea', required: false }
     ],
     procesar: (d) => ({
       apoyo: d.apoyo ? d.apoyo.split(',').map(s => s.trim()).filter(Boolean) : [],
+      urgente: d.urgente === 'Sí',
       recogido: false,
       necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []
     }),
     popupDetalle: (info) => {
       let html = `<div class="popup-info" style="color:#C62828;">⚠️ Edificio colapsado</div>`;
-      if (info.apoyo?.length) html += `<div class="popup-info">🛠️ Necesitan: ${info.apoyo.join(', ')}</div>`;
       if (info.recogido) html += `<div class="popup-info" style="color:#2e7d32;">✅ Ya recogido y limpiado</div>`;
       return html;
     }
@@ -139,10 +151,12 @@ const TIPOS = {
     campos: [
       { id: 'nombre', label: 'Ubicación / referencia *', type: 'text', required: true },
       { id: 'advertencia', label: 'Advertencia adicional (opcional)', type: 'textarea', required: false },
+      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'necesidades', label: 'Necesidades detalladas (una por línea)', type: 'textarea', required: false }
     ],
     procesar: (d) => ({
       advertencia: d.advertencia || 'Manténgase alejado, estructura inestable',
+      urgente: d.urgente === 'Sí',
       necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []
     }),
     popupDetalle: (info) => `<div class="popup-advertencia">⚠️ ${info.advertencia}</div>`
@@ -153,10 +167,12 @@ const TIPOS = {
     campos: [
       { id: 'nombre', label: 'Ubicación / referencia *', type: 'text', required: true },
       { id: 'nota', label: 'Nota adicional (opcional)', type: 'textarea', required: false },
+      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'necesidades', label: 'Necesidades detalladas (una por línea)', type: 'textarea', required: false }
     ],
     procesar: (d) => ({
       mensaje: d.nota || 'Estructura no ha sido inspeccionada por personal autorizado',
+      urgente: d.urgente === 'Sí',
       necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []
     }),
     popupDetalle: (info) => `<div class="popup-info" style="color:#6A1B9A;">❓ ${info.mensaje}</div>`
@@ -167,6 +183,7 @@ const TIPOS = {
     campos: [
       { id: 'nombre', label: 'Nombre del centro veterinario *', type: 'text', required: true },
       { id: 'direccion', label: 'Dirección', type: 'text', required: false },
+      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'servicios', label: 'Servicios que ofrecen (separados por comas)', type: 'textarea', required: false },
       { id: 'emergencia', label: '¿Atienden emergencias 24h?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'necesidades', label: 'Necesidades detalladas (una por línea)', type: 'textarea', required: false }
@@ -174,6 +191,7 @@ const TIPOS = {
     procesar: (d) => ({
       servicios: d.servicios ? d.servicios.split(',').map(s => s.trim()).filter(Boolean) : [],
       emergencia_24h: d.emergencia === 'Sí',
+      urgente: d.urgente === 'Sí',
       necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []
     }),
     popupDetalle: (info) => {
@@ -189,6 +207,7 @@ const TIPOS = {
     campos: [
       { id: 'nombre', label: 'Nombre del centro / profesional *', type: 'text', required: true },
       { id: 'direccion', label: 'Dirección', type: 'text', required: false },
+      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'horario', label: 'Horario de atención', type: 'text', required: false },
       { id: 'contacto', label: 'Teléfono de contacto', type: 'text', required: false },
       { id: 'necesidades', label: 'Información adicional (una por línea)', type: 'textarea', required: false }
@@ -196,6 +215,7 @@ const TIPOS = {
     procesar: (d) => ({
       horario: d.horario || '',
       contacto: d.contacto || '',
+      urgente: d.urgente === 'Sí',
       necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []
     }),
     popupDetalle: (info) => {
@@ -211,6 +231,7 @@ const TIPOS = {
     campos: [
       { id: 'nombre', label: 'Nombre del punto de vacunación *', type: 'text', required: true },
       { id: 'direccion', label: 'Dirección', type: 'text', required: false },
+      { id: 'urgente', label: '¿Es urgente?', type: 'select', options: ['No', 'Sí'], required: false },
       { id: 'horario', label: 'Horario de aplicación', type: 'text', required: false },
       { id: 'contacto', label: 'Teléfono de contacto', type: 'text', required: false },
       { id: 'necesidades', label: 'Información adicional (una por línea)', type: 'textarea', required: false }
@@ -218,6 +239,7 @@ const TIPOS = {
     procesar: (d) => ({
       horario: d.horario || '',
       contacto: d.contacto || '',
+      urgente: d.urgente === 'Sí',
       necesidades: d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []
     }),
     popupDetalle: (info) => {
@@ -229,7 +251,7 @@ const TIPOS = {
   }
 };
 // ============================================================
-// BLOQUE 2: CARGA, GUARDADO, FILTROS Y MOSTRAR PUNTOS
+// BLOQUE 2: CARGA, GUARDADO, FILTROS, MOSTRAR, LISTA, CONTADORES, DETALLE
 // ============================================================
 
 function cargarPuntos() {
@@ -245,12 +267,12 @@ function cargarPuntos() {
       {
         id: '1', tipo: 'refugio', nombre: 'Refugio Los Rosales',
         lat: 10.4910, lng: -66.8730,
-        informacion: { direccion: 'Av. Principal', cupo: 150, necesidad_infantil: true, necesidades: ['Agua', 'Comida', 'Colchonetas'], voluntarios_infantiles: [] }
+        informacion: { direccion: 'Av. Principal', cupo: 150, urgente: true, necesidad_infantil: true, necesidades: ['Agua', 'Comida', 'Colchonetas'], voluntarios_infantiles: [] }
       },
       {
         id: '2', tipo: 'centro_acopio', nombre: 'Centro de Acopio Las Mercedes',
         lat: 10.5000, lng: -66.9000,
-        informacion: { direccion: 'Calle 2', necesita: ['Agua', 'Comida enlatada'], suficientes: ['Ropa'], necesidad_infantil: false, necesidades: ['Organizar donaciones'], envios: [] }
+        informacion: { direccion: 'Calle 2', necesita: ['Agua', 'Comida enlatada'], suficientes: ['Ropa'], urgente: false, necesidad_infantil: false, necesidades: ['Organizar donaciones'], envios: [] }
       }
     ];
     localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
@@ -263,9 +285,14 @@ function guardarPuntos() {
 }
 
 function aplicarFiltros() {
-  const filtrados = filtroActivo === 'todos'
-    ? todosLosPuntos
-    : todosLosPuntos.filter(p => p.tipo === filtroActivo);
+  let filtrados;
+  if (filtroActivo === 'todos') {
+    filtrados = todosLosPuntos;
+  } else if (filtroActivo === 'edificio_recogido') {
+    filtrados = todosLosPuntos.filter(p => p.tipo === 'edificio_caido' && p.informacion?.recogido === true);
+  } else {
+    filtrados = todosLosPuntos.filter(p => p.tipo === filtroActivo);
+  }
   mostrarPuntos(filtrados);
   if (ubicacionUsuario && filtrados.length > 0) {
     const conDistancia = filtrados.map(p => ({
@@ -310,13 +337,23 @@ function mostrarPuntos(puntos) {
     `;
 
     const necesidades = p.informacion?.necesidades || [];
+    const esUrgente = p.informacion?.urgente || false;
+
     if (necesidades.length > 0) {
-      popupContent += `<div class="popup-seccion"><strong>📋 Más información</strong><ul class="popup-lista">`;
+      const estiloFondo = esUrgente 
+        ? 'background:#ffebee;border-left:4px solid #d32f2f;padding:6px 10px;border-radius:4px;margin-top:8px;' 
+        : 'background:#fff3e0;border-left:4px solid #E53935;padding:6px 10px;border-radius:4px;margin-top:8px;';
+      const tituloUrgencia = esUrgente 
+        ? '<span style="background:#d32f2f;color:white;padding:2px 8px;border-radius:4px;font-size:12px;">🚨 URGENTE</span> ' 
+        : '';
+      popupContent += `<div class="popup-seccion" style="${estiloFondo}">
+        <strong style="color:${esUrgente ? '#d32f2f' : '#E53935'};font-size:15px;">🔥 Prioridad ${tituloUrgencia}</strong>
+        <ul class="popup-lista">`;
       necesidades.forEach(n => popupContent += `<li>${n}</li>`);
       popupContent += `</ul></div>`;
     }
 
-    // BOTONES DE ACCIÓN
+    // Botones de acción
     if (p.tipo === 'edificio_caido' && !recogido) {
       popupContent += `
         <button class="btn-recoger" data-id="${p.id}" style="margin-top:8px;background:#4CAF50;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
@@ -423,8 +460,204 @@ function mostrarPuntos(puntos) {
     markersLayer.addLayer(marker);
   });
 }
+
 // ============================================================
-// BLOQUE 3: ADMIN, GEOLOCALIZACIÓN, SELECCIÓN, MENÚ Y GUARDAR
+// NUEVAS FUNCIONES: LISTA, CONTADORES Y PANEL DE DETALLE
+// ============================================================
+
+function actualizarContadores() {
+  const contenedor = document.getElementById('contenedorContadores');
+  if (!contenedor) return;
+
+  const tipos = {
+    'refugio': { label: '🏠 Refugios', count: 0 },
+    'centro_acopio': { label: '📦 Acopios', count: 0 },
+    'hospital': { label: '🏥 Hospitales', count: 0 },
+    'edificio_caido': { label: '💥 Caídos', count: 0 },
+    'edificio_recogido': { label: '✅ Recogidos', count: 0 },
+    'peligro_derrumbe': { label: '⚠️ Derrumbe', count: 0 },
+    'sin_inspeccionar': { label: '❓ Sin insp.', count: 0 },
+    'veterinaria': { label: '🐾 Veterinaria', count: 0 },
+    'ayuda_psicologica': { label: '🧠 Psicología', count: 0 },
+    'vacuna_tetanos': { label: '💉 Vacuna', count: 0 }
+  };
+
+  todosLosPuntos.forEach(p => {
+    let tipo = p.tipo;
+    if (tipo === 'edificio_caido' && p.informacion?.recogido) {
+      tipo = 'edificio_recogido';
+    }
+    if (tipos[tipo]) tipos[tipo].count++;
+  });
+
+  let html = '';
+  for (const [key, val] of Object.entries(tipos)) {
+    if (val.count > 0 || key === 'edificio_caido' || key === 'edificio_recogido') {
+      html += `<span style="background:#f0f0f0;padding:4px 10px;border-radius:16px;font-size:13px;font-weight:bold;">${val.label}: ${val.count}</span>`;
+    }
+  }
+  contenedor.innerHTML = html;
+}
+
+function mostrarListaPuntos() {
+  const panel = document.getElementById('panelLista');
+  panel.style.display = 'flex';
+  actualizarContadores();
+
+  const contenedor = document.getElementById('contenedorLista');
+  if (!contenedor) return;
+
+  const puntosOrdenados = [...todosLosPuntos].reverse();
+
+  let html = '';
+  puntosOrdenados.forEach(p => {
+    const tipo = TIPOS[p.tipo];
+    if (!tipo) return;
+    const esUrgente = p.informacion?.urgente || false;
+    const recogido = p.tipo === 'edificio_caido' && p.informacion?.recogido;
+    const estado = recogido ? '✅ Recogido' : (esUrgente ? '🚨 Urgente' : '');
+
+    html += `
+      <div class="item-lista" data-id="${p.id}" style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid #eee;cursor:pointer;background:${recogido ? '#f0f0f0' : 'white'};border-left:4px solid ${recogido ? '#757575' : tipo.color};margin-bottom:4px;border-radius:4px;">
+        <div style="flex:1;">
+          <strong>${p.nombre}</strong>
+          <span style="font-size:13px;color:#555;margin-left:8px;">${tipo.label}</span>
+          ${estado ? `<span style="font-size:12px;background:${esUrgente ? '#d32f2f' : '#2e7d32'};color:white;padding:2px 8px;border-radius:12px;margin-left:8px;">${estado}</span>` : ''}
+        </div>
+        <span style="color:#1a73e8;font-size:12px;">👁️ Ver</span>
+      </div>
+    `;
+  });
+
+  if (puntosOrdenados.length === 0) {
+    html = '<p style="text-align:center;color:#666;padding:40px;">No hay puntos registrados. ¡Agrega el primero!</p>';
+  }
+
+  contenedor.innerHTML = html;
+
+  document.querySelectorAll('.item-lista').forEach(el => {
+    el.addEventListener('click', function() {
+      const id = this.dataset.id;
+      mostrarDetallePunto(id);
+    });
+  });
+}
+
+function mostrarDetallePunto(id) {
+  const punto = todosLosPuntos.find(p => p.id === id);
+  if (!punto) { alert('Punto no encontrado'); return; }
+
+  const panel = document.getElementById('panelDetalle');
+  panel.style.display = 'flex';
+  document.getElementById('detalleTitulo').textContent = `📌 ${punto.nombre}`;
+
+  const tipo = TIPOS[punto.tipo];
+  if (!tipo) return;
+
+  let html = `
+    <div style="margin-bottom:12px;">
+      <span style="font-weight:bold;">Tipo:</span> ${tipo.icono} ${tipo.label}
+    </div>
+    <div style="margin-bottom:12px;">
+      <span style="font-weight:bold;">Dirección:</span> ${punto.informacion?.direccion || 'No especificada'}
+    </div>
+    <div style="margin-bottom:12px;">
+      <span style="font-weight:bold;">Coordenadas:</span> ${punto.lat}, ${punto.lng}
+    </div>
+  `;
+
+  const necesidades = punto.informacion?.necesidades || [];
+  const esUrgente = punto.informacion?.urgente || false;
+  if (necesidades.length > 0) {
+    html += `<div style="margin-bottom:12px;background:${esUrgente ? '#ffebee' : '#fff3e0'};padding:8px;border-radius:4px;border-left:4px solid ${esUrgente ? '#d32f2f' : '#E53935'};">
+      <strong style="color:${esUrgente ? '#d32f2f' : '#E53935'};">🔥 Prioridad ${esUrgente ? '🚨 URGENTE' : ''}</strong>
+      <ul style="margin:4px 0 0 18px;">`;
+    necesidades.forEach(n => html += `<li>${n}</li>`);
+    html += `</ul></div>`;
+  }
+
+  for (const [key, val] of Object.entries(punto.informacion || {})) {
+    if (key === 'direccion' || key === 'necesidades' || key === 'urgente' || key === 'voluntarios_infantiles' || key === 'envios') continue;
+    if (val && val.length > 0) {
+      html += `<div style="margin-bottom:8px;"><strong>${key}:</strong> ${typeof val === 'string' ? val : JSON.stringify(val)}</div>`;
+    }
+  }
+
+  if (punto.informacion?.voluntarios_infantiles && punto.informacion.voluntarios_infantiles.length > 0) {
+    html += `<div style="margin-bottom:12px;"><strong>👥 Voluntarios registrados:</strong><ul style="margin:4px 0 0 18px;">`;
+    punto.informacion.voluntarios_infantiles.forEach(v => {
+      html += `<li>${v.nombre} (${v.rol || 'Voluntario'}) - ${v.telefono || 'Sin teléfono'}</li>`;
+    });
+    html += `</ul></div>`;
+  }
+
+  if (punto.tipo === 'centro_acopio' && punto.informacion?.envios && punto.informacion.envios.length > 0) {
+    html += `<div style="margin-bottom:12px;"><strong>🚚 Envíos activos:</strong><ul style="margin:4px 0 0 18px;">`;
+    punto.informacion.envios.forEach(e => {
+      const estadoColor = e.estado === 'entregado' ? '#2e7d32' : e.estado === 'incidencia' ? '#d32f2f' : '#F57C00';
+      html += `<li>${e.contenido} → ${e.destinoNombre} (<span style="color:${estadoColor};">${e.estado}</span>)</li>`;
+    });
+    html += `</ul></div>`;
+  }
+
+  if (modoAdmin) {
+    html += `
+      <button id="btnEditarDesdeDetalle" data-id="${punto.id}" style="margin-top:12px;background:#1a237e;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">
+        ✏️ Editar este punto
+      </button>
+      <button id="btnEliminarDesdeDetalle" data-id="${punto.id}" style="margin-top:6px;background:#d32f2f;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">
+        🗑️ Eliminar punto
+      </button>
+    `;
+  }
+
+  if (punto.tipo === 'edificio_caido' && !punto.informacion?.recogido) {
+    html += `
+      <button id="btnRecogerDesdeDetalle" data-id="${punto.id}" style="margin-top:6px;background:#4CAF50;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">
+        ✅ Marcar como recogido
+      </button>
+    `;
+  }
+
+  if (punto.tipo === 'edificio_caido' && punto.informacion?.recogido) {
+    html += `<div style="margin-top:8px;background:#e0e0e0;padding:10px;border-radius:8px;text-align:center;color:#333;">✅ Este edificio ya fue recogido y limpiado</div>`;
+  }
+
+  document.getElementById('contenidoDetalle').innerHTML = html;
+
+  if (modoAdmin) {
+    const btnEditar = document.getElementById('btnEditarDesdeDetalle');
+    if (btnEditar) btnEditar.addEventListener('click', function() {
+      const id = this.dataset.id;
+      document.getElementById('panelDetalle').style.display = 'none';
+      mostrarFormularioEdicionPunto(id);
+    });
+    const btnEliminar = document.getElementById('btnEliminarDesdeDetalle');
+    if (btnEliminar) btnEliminar.addEventListener('click', function() {
+      const id = this.dataset.id;
+      if (confirm('¿Eliminar este punto?')) {
+        eliminarPunto(id);
+        document.getElementById('panelDetalle').style.display = 'none';
+        cerrarLista();
+      }
+    });
+  }
+
+  const btnRecoger = document.getElementById('btnRecogerDesdeDetalle');
+  if (btnRecoger) btnRecoger.addEventListener('click', function() {
+    const id = this.dataset.id;
+    marcarRecogido(id);
+    document.getElementById('panelDetalle').style.display = 'none';
+    cerrarLista();
+  });
+}
+
+function cerrarLista() {
+  document.getElementById('panelLista').style.display = 'none';
+  document.getElementById('panelDetalle').style.display = 'none';
+}
+// ============================================================
+// BLOQUE 3: ADMIN, GEOLOCALIZACIÓN, SELECCIÓN, MENÚ, EVENTOS
 // ============================================================
 
 function marcarRecogido(id) {
@@ -614,9 +847,6 @@ btnGuardar.addEventListener('click', function() {
   ubicacionSeleccionada = null;
   aplicarFiltros();
 });
-// ============================================================
-// BLOQUE 4: CANCELAR, BUSCADOR, FILTROS, VOLUNTARIADO, NAVEGACIÓN (1/2)
-// ============================================================
 
 btnCancelar.addEventListener('click', function() {
   const btnRegistro = document.getElementById('btnRegistrarVoluntario');
@@ -672,6 +902,20 @@ document.querySelectorAll('#filtros .filtro-btn').forEach(btn => {
     aplicarFiltros();
   });
 });
+
+// Eventos de lista
+document.getElementById('btnVerLista').addEventListener('click', function() {
+  mostrarListaPuntos();
+});
+document.getElementById('btnCerrarLista').addEventListener('click', function() {
+  cerrarLista();
+});
+document.getElementById('btnCerrarDetalle').addEventListener('click', function() {
+  document.getElementById('panelDetalle').style.display = 'none';
+});
+// ============================================================
+// BLOQUE 4: VOLUNTARIADO, NAVEGACIÓN, EDICIÓN DE PUNTOS
+// ============================================================
 
 function mostrarFormularioVoluntarioInfantil(puntoId) {
   const punto = todosLosPuntos.find(p => p.id === puntoId);
@@ -763,9 +1007,6 @@ function iniciarNavegacion(puntoId) {
     punto.nombre
   );
 }
-// ============================================================
-// BLOQUE 5: NAVEGACIÓN (2/2), EDICIÓN, TRANSPORTE E INICIALIZACIÓN
-// ============================================================
 
 function trazarRuta(origen, destino, nombreDestino) {
   if (controlRuta) { map.removeControl(controlRuta); controlRuta = null; }
@@ -792,7 +1033,8 @@ function trazarRuta(origen, destino, nombreDestino) {
     }),
     createMarker: function() { return null; },
     fitSelectedRoutes: true,
-    show: true
+    show: false, // Ocultar panel de instrucciones
+    collapsible: true
   }).addTo(map);
 
   controlRuta.on('routesfound', function(e) {
@@ -924,6 +1166,9 @@ function mostrarFormularioEdicionPunto(puntoId) {
     btnCancelar.style.display = 'block';
   });
 }
+// ============================================================
+// BLOQUE 5: TRANSPORTE DE SUMINISTROS E INICIALIZACIÓN
+// ============================================================
 
 function mostrarFormularioCrearEnvio(puntoId) {
   const punto = todosLosPuntos.find(p => p.id === puntoId);
@@ -1225,4 +1470,4 @@ document.addEventListener('DOMContentLoaded', function() {
 cargarPuntos();
 obtenerUbicacion();
 
-console.log('✅ App con localStorage (sin nube)');
+console.log('✅ App con localStorage (sin nube) - Todos los puntos, lista y detalles');
