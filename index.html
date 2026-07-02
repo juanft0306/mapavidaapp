@@ -3,87 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Prueba Supabase</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    body { font-family: Arial; margin: 0; }
-    #map { height: 80vh; }
-    #btn { position: absolute; top: 20px; right: 20px; z-index: 1000; padding: 10px 20px; background: #E53935; color: white; border: none; border-radius: 20px; cursor: pointer; }
-    #formulario { display: none; background: white; padding: 20px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2000; border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
-    #formulario input { display: block; width: 100%; margin: 10px 0; padding: 8px; }
-    #formulario button { margin: 5px; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
-    #guardar { background: #4CAF50; color: white; }
-    #cancelar { background: #f44336; color: white; }
-  </style>
+  <title>Prueba de Botón</title>
 </head>
 <body>
-  <button id="btn">+ Agregar Refugio</button>
-  <div id="map"></div>
-
-  <div id="formulario">
-    <h3>Nuevo Refugio</h3>
-    <input id="nombre" placeholder="Nombre" value="Refugio de Prueba">
-    <input id="lat" placeholder="Latitud" value="10.4910">
-    <input id="lng" placeholder="Longitud" value="-66.8730">
-    <button id="guardar">Guardar</button>
-    <button id="cancelar">Cancelar</button>
-  </div>
+  <button id="btn" style="padding:20px; font-size:20px;">+ Agregar Refugio</button>
 
   <script>
-    // CONFIGURACIÓN (REEMPLAZA CON TUS LLAVES)
-    const SUPABASE_URL = 'https://gtaadqluoljexglenbqo.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_n_h1fN6QWuEWbFxrCTKFvQ_rxw-o9-Y';
+    // ✅ Alerta al cargar la página
+    alert('🚀 Página cargada');
 
-    // Inicializar Supabase
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    // Mapa
-    const map = L.map('map').setView([10.4806, -66.9036], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: 'MapaVida'
-    }).addTo(map);
-
-    // Elementos DOM
+    // Buscar el botón
     const btn = document.getElementById('btn');
-    const formulario = document.getElementById('formulario');
-    const guardar = document.getElementById('guardar');
-    const cancelar = document.getElementById('cancelar');
 
-    // Mostrar formulario
-    btn.addEventListener('click', function() {
-      formulario.style.display = 'block';
-    });
+    // Verificar si existe
+    if (!btn) {
+      alert('❌ Botón no encontrado');
+    } else {
+      alert('✅ Botón encontrado');
 
-    // Cancelar
-    cancelar.addEventListener('click', function() {
-      formulario.style.display = 'none';
-    });
+      // Asignar evento
+      btn.addEventListener('click', function() {
+        alert('🔥 ¡CLICK DETECTADO!');
+      });
 
-    // Guardar (SOLO PRUEBA)
-    guardar.addEventListener('click', async function() {
-      const nombre = document.getElementById('nombre').value;
-      const lat = parseFloat(document.getElementById('lat').value);
-      const lng = parseFloat(document.getElementById('lng').value);
-
-      alert(`Intentando guardar: ${nombre}, ${lat}, ${lng}`);
-
-      const { data, error } = await supabase
-        .from('refugios')
-        .insert([{ nombre, lat, lng }]);
-
-      if (error) {
-        alert('❌ ERROR: ' + error.message);
-        console.error('Error detallado:', error);
-      } else {
-        alert('✅ ¡Guardado exitoso!');
-        formulario.style.display = 'none';
-        // Agregar marcador al mapa
-        L.marker([lat, lng]).bindPopup(nombre).addTo(map);
-      }
-    });
+      // También agregar onclick en el HTML por si acaso
+      btn.onclick = function() {
+        alert('🔥 Click desde onclick');
+      };
+    }
   </script>
 </body>
 </html>
