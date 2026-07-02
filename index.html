@@ -371,6 +371,7 @@
       box-shadow: 0 10px 40px rgba(0,0,0,0.5);
       overflow-y: auto;
       flex-direction: column;
+      transition: height 0.3s ease, min-height 0.3s ease, opacity 0.2s ease;
     }
     #panelLista .header-lista {
       display: flex;
@@ -379,6 +380,8 @@
       margin-bottom: 12px;
       flex-wrap: wrap;
       gap: 8px;
+      cursor: pointer;
+      user-select: none;
     }
     #panelLista .header-lista h2 { margin: 0; }
     #panelLista .header-lista button {
@@ -448,6 +451,7 @@
       box-shadow: 0 10px 40px rgba(0,0,0,0.5);
       overflow-y: auto;
       flex-direction: column;
+      transition: height 0.3s ease, min-height 0.3s ease, opacity 0.2s ease;
     }
     @media (max-width: 480px) {
       #panelDetalle { width: calc(100% - 20px); right: 10px; }
@@ -457,6 +461,8 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 12px;
+      cursor: pointer;
+      user-select: none;
     }
     #panelDetalle .header-detalle h3 { margin: 0; }
     #panelDetalle .header-detalle button {
@@ -484,12 +490,15 @@
       box-shadow: 0 10px 40px rgba(0,0,0,0.5);
       overflow-y: auto;
       flex-direction: column;
+      transition: height 0.3s ease, min-height 0.3s ease, opacity 0.2s ease;
     }
     #panelUrgencias .header-urgencias {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 12px;
+      cursor: pointer;
+      user-select: none;
     }
     #panelUrgencias .header-urgencias h2 { margin: 0; color: #d32f2f; }
     #panelUrgencias .header-urgencias button {
@@ -500,6 +509,22 @@
       border-radius: 8px;
       cursor: pointer;
       font-weight: bold;
+    }
+
+    /* ===== ESTADO MINIMIZADO ===== */
+    .panel-minimizado {
+      height: 50px !important;
+      min-height: 50px !important;
+      overflow: hidden !important;
+      cursor: pointer;
+    }
+    .panel-minimizado .panel-contenido {
+      display: none !important;
+    }
+    .panel-minimizado .header-lista,
+    .panel-minimizado .header-detalle,
+    .panel-minimizado .header-urgencias {
+      cursor: pointer;
     }
 
     /* ===== CHAT ===== */
@@ -807,11 +832,11 @@
 
   <!-- PANEL DE LISTA -->
   <div id="panelLista">
-    <div class="header-lista">
+    <div class="header-lista" id="headerLista">
       <h2>📋 Todos los puntos</h2>
       <button id="btnCerrarLista">✖ Cerrar</button>
     </div>
-    <div>
+    <div class="panel-contenido">
       <div id="filtrosLista">
         <button class="activo" data-tipo="todos">Todos</button>
         <button data-tipo="urgentes">🚨 Urgentes</button>
@@ -834,20 +859,20 @@
 
   <!-- PANEL DE DETALLE -->
   <div id="panelDetalle">
-    <div class="header-detalle">
+    <div class="header-detalle" id="headerDetalle">
       <h3 id="detalleTitulo">Detalle</h3>
       <button id="btnCerrarDetalle">✖</button>
     </div>
-    <div id="contenidoDetalle"></div>
+    <div class="panel-contenido" id="contenidoDetalle"></div>
   </div>
 
   <!-- PANEL DE URGENCIAS -->
   <div id="panelUrgencias">
-    <div class="header-urgencias">
+    <div class="header-urgencias" id="headerUrgencias">
       <h2>🚨 Urgencias</h2>
       <button id="btnCerrarUrgencias">✖ Cerrar</button>
     </div>
-    <div id="contenedorUrgencias"></div>
+    <div class="panel-contenido" id="contenedorUrgencias"></div>
   </div>
 
   <!-- CHAT -->
