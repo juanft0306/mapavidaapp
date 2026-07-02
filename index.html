@@ -3,39 +3,63 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MapaVida - Prueba Mapa</title>
+  <title>MapaVida - Depuración</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body { margin: 0; }
-    #map { height: 90vh; }
-    #btn {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      z-index: 1000;
-      padding: 10px 20px;
-      background: #E53935;
-      color: white;
-      border: none;
-      border-radius: 20px;
-      font-weight: bold;
-      cursor: pointer;
-    }
+    body { font-family: Arial; text-align: center; margin-top: 50px; }
+    button { padding: 15px 30px; background: #E53935; color: white; border: none; border-radius: 10px; font-size: 18px; cursor: pointer; }
+    #map { height: 70vh; width: 80%; margin: 20px auto; border: 2px solid red; }
   </style>
 </head>
 <body>
-  <button id="btn" onclick="alert('🔥 Botón clickeado')">+ Agregar Refugio</button>
+  <h1>🆘 MapaVida - Depuración</h1>
+  <button id="btnAgregar" onclick="alert('🔥 Click directo')">+ Agregar Refugio</button>
   <div id="map"></div>
 
   <script>
-    alert('🚀 Script cargado');
-    const map = L.map('map').setView([10.4806, -66.9036], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: 'MapaVida'
-    }).addTo(map);
-    alert('✅ Mapa creado');
+    alert('🚀 PASO 1: Script iniciado');
+
+    // 🔥 CONFIGURACIÓN DE SUPABASE (REEMPLAZA CON TUS LLAVES)
+    const SUPABASE_URL = 'https://gtaadqluoljexglenbqo.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_n_h1fN6QWuEWbFxrCTKFvQ_rxw-o9-Y'; // <--- PON AQUÍ TU CLAVE REAL
+
+    alert('✅ PASO 2: Llaves definidas');
+
+    // Inicializar Supabase
+    try {
+      const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      alert('✅ PASO 3: Supabase inicializado correctamente');
+    } catch (e) {
+      alert('❌ ERROR al inicializar Supabase: ' + e.message);
+    }
+
+    // Inicializar mapa
+    try {
+      const map = L.map('map').setView([10.4806, -66.9036], 12);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: 'MapaVida'
+      }).addTo(map);
+      alert('✅ PASO 4: Mapa creado correctamente');
+    } catch (e) {
+      alert('❌ ERROR al crear mapa: ' + e.message);
+    }
+
+    // Buscar el botón
+    const btn = document.getElementById('btnAgregar');
+    if (!btn) {
+      alert('❌ PASO 5: Botón NO encontrado');
+    } else {
+      alert('✅ PASO 5: Botón encontrado');
+      // El onclick ya está en el HTML, pero también asignamos uno por si acaso
+      btn.addEventListener('click', function() {
+        alert('🔥 Evento listener ejecutado');
+      });
+    }
+
+    alert('✅ PASO 6: Script completado');
   </script>
 </body>
 </html>
