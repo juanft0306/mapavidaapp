@@ -33,7 +33,7 @@ function puntoDesdeSupabase(data) {
     };
 }
 
-// 4. NUEVA FUNCIÓN: Cargar puntos desde Supabase (si localStorage está vacío)
+// 4. Función: Cargar puntos desde Supabase
 async function cargarPuntosDesdeSupabase() {
     const { data, error } = await supabaseClient
         .from('puntos')
@@ -47,75 +47,75 @@ async function cargarPuntosDesdeSupabase() {
 
     // Convertir cada registro al formato de app.js
     const puntos = data.map(puntoDesdeSupabase);
-    console.log(`✅ ${puntos.length} puntos cargados desde la nube`);
+    console.log(`☁️ ${puntos.length} puntos cargados desde la nube`);
     return puntos;
 }
 
-// 5. SOBRESCRIBIR 'cargarPuntos' de app.js
-const cargarPuntosOriginal = window.cargarPuntos; // guardamos por si acaso
+// 5. NUEVA FUNCIÓN: Cargar puntos (prioriza la nube)
+async function cargarPuntos() {
+    console.log('🔄 Iniciando carga de datos...');
 
-window.cargarPuntos = async function() {
-    // Intentar cargar desde localStorage primero
-    const stored = localStorage.getItem('puntosMapaVida');
-    let puntos = [];
-    let desdeNube = false;
+    // Intentar cargar desde Supabase primero (fuente de verdad)
+    let puntos = await cargarPuntosDesdeSupabase();
 
-    if (stored) {
-        try {
-            puntos = JSON.parse(stored);
-            console.log('📂 Datos cargados desde localStorage');
-        } catch (e) {
-            puntos = [];
-        }
-    }
-
-    // Si no hay datos locales, o si queremos forzar sincronización, ir a la nube
-    if (puntos.length === 0) {
-        console.log('☁️ No hay datos locales, cargando desde Supabase...');
-        puntos = await cargarPuntosDesdeSupabase();
-        if (puntos.length > 0) {
-            // Guardar en localStorage para futuras cargas rápidas
-            localStorage.setItem('puntosMapaVida', JSON.stringify(puntos));
-            console.log('💾 Datos de la nube guardados localmente');
-        } else {
-            // Si la nube está vacía, crear un punto de ejemplo (opcional)
-            // Puedes comentar esta parte si ya tienes datos en la nube
-            if (localStorage.getItem('puntosMapaVida') === null) {
-                const puntoEjemplo = {
-                    id: Date.now().toString(),
-                    tipo: 'refugio',
-                    nombre: 'Refugio Ejemplo',
-                    lat: 10.4910,
-                    lng: -66.8730,
-                    informacion: {
-                        direccion: 'Av. Principal',
-                        cupo: 100,
-                        necesidades: ['Agua', 'Comida'],
-                        estado: 'aprobado',
-                        fecha_creacion: new Date().toLocaleString(),
-                        fecha_edicion: new Date().toLocaleString()
-                    }
-                };
-                puntos = [puntoEjemplo];
-                localStorage.setItem('puntosMapaVida', JSON.stringify(puntos));
-                // También subirlo a la nube para que otros dispositivos lo vean
+    if (puntos.length > 0) {
+        // Si hay datos en la nube, guardarlos localmente y usarlos
+        localStorage.setItem('puntosMapaVida', JSON.stringify(puntos));
+        window.todosLosPuntos = puntos;
+        console.log('✅ Datos cargados desde la nube');
+    } else {
+        // Si la nube está vacía, intentar cargar localStorage
+        const stored = localStorage.getItem('puntosMapaVida');
+        if (stored) {
+            try {
+                puntos = JSON.parse(stored);
+                window.todosLosPuntos = puntos;
+                console.log('📂 Datos cargados desde localStorage (nube vacía)');
+                // Subir estos puntos a la nube para que otros los vean
                 await guardarPuntosEnNube(puntos);
+                console.log('☁️ Datos locales subidos a la nube');
+            } catch (e) {
+                puntos = [];
+                console.warn('⚠️ Error al parsear localStorage:', e);
             }
         }
+
+        // Si no hay nada, crear punto de ejemplo y guardarlo
+        if (puntos.length === 0) {
+            const puntoEjemplo = {
+                id: Date.now().toString(),
+                tipo: 'refugio',
+                nombre: 'Refugio Ejemplo',
+                lat: 10.4910,
+                lng: -66.8730,
+                informacion: {
+                    direccion: 'Av. Principal',
+                    cupo: 100,
+                    necesidades: ['Agua', 'Comida', 'Colchonetas'],
+                    estado: 'aprobado',
+                    fecha_creacion: new Date().toLocaleString(),
+                    fecha_edicion: new Date().toLocaleString()
+                }
+            };
+            puntos = [puntoEjemplo];
+            localStorage.setItem('puntosMapaVida', JSON.stringify(puntos));
+            await guardarPuntosEnNube(puntos);
+            window.todosLosPuntos = puntos;
+            console.log('🆕 Punto de ejemplo creado y subido a la nube');
+        }
     }
 
-    // Asignar a la variable global de app.js
-    window.todosLosPuntos = puntos;
     // Aplicar filtros para mostrar en el mapa
     if (typeof aplicarFiltros === 'function') {
         aplicarFiltros();
     }
-    console.log('✅ Puntos cargados y mapa actualizado');
-};
+    console.log('✅ Carga finalizada');
+}
 
-// 6. SOBRESCRIBIR 'guardarPuntos' de app.js
-const guardarPuntosOriginal = window.guardarPuntos;
+// 6. SOBRESCRIBIR 'cargarPuntos' de app.js
+window.cargarPuntos = cargarPuntos;
 
+// 7. SOBRESCRIBIR 'guardarPuntos' de app.js
 window.guardarPuntos = async function() {
     // Primero guardar localmente (comportamiento original)
     localStorage.setItem('puntosMapaVida', JSON.stringify(window.todosLosPuntos));
@@ -138,7 +138,7 @@ window.guardarPuntos = async function() {
     }
 };
 
-// 7. (Opcional) Forzar sincronización completa desde la nube
+// 8. (Opcional) Forzar sincronización completa desde la nube
 window.sincronizarDesdeNube = async function() {
     const puntos = await cargarPuntosDesdeSupabase();
     if (puntos.length > 0) {
@@ -153,6 +153,10 @@ window.sincronizarDesdeNube = async function() {
     }
 };
 
-// 8. Ejecutar la carga al iniciar (sustituye a la llamada original en app.js)
-// app.js llama a cargarPuntos() al final, pero como la sobrescribimos, se usará nuestra versión.
+// 9. EJECUTAR LA CARGA AHORA MISMO (después de sobrescribir)
+// Esto reemplaza la llamada original de app.js
+setTimeout(async () => {
+    await cargarPuntos();
+}, 100); // Pequeño retraso para asegurar que todo esté cargado
+
 console.log('🔄 sync.js cargado. Las funciones de guardado/carga ahora usan Supabase.');
