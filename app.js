@@ -11,14 +11,12 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: 'MapaVida'
 }).addTo(map);
 
-// OCULTAR LOADER INMEDIATAMENTE
 document.getElementById('cargando').style.display = 'none';
 
 // ============================================================
 // VARIABLES GLOBALES
 // ============================================================
 const ADMIN_PASSWORD = 'MapaVida2026';
-const MASTER_PASSWORD = 'SeguridadMapa2026';
 
 let todosLosPuntos = [];
 let markersLayer = L.layerGroup().addTo(map);
@@ -33,6 +31,7 @@ let puntoEnEdicion = null;
 let controlRuta = null;
 let modoNavegacion = false;
 let filtroLista = 'todos';
+let busquedaNecesidad = '';
 
 // ============================================================
 // SANITIZACIÓN (DOMPurify)
@@ -336,7 +335,7 @@ const TIPOS = {
   }
 };
 // ============================================================
-// BLOQUE 2: CARGA, GUARDADO, ADMIN, GESTIÓN DE PENDIENTES
+// BLOQUE 2: CARGA, GUARDADO, ADMIN Y GESTIÓN DE PENDIENTES
 // ============================================================
 
 // --- CARGAR PUNTOS DESDE LOCALSTORAGE ---
@@ -352,7 +351,6 @@ function cargarPuntos() {
       aplicarFiltros();
     }
   } else {
-    // Datos de ejemplo
     todosLosPuntos = [
       {
         id: '1', tipo: 'refugio', nombre: 'Refugio Los Rosales',
@@ -418,8 +416,6 @@ function loginAdmin(password) {
     modoAdmin = true;
     document.getElementById('btnAdmin').textContent = '🔓 Administrador activo';
     document.getElementById('btnAdmin').style.background = '#2e7d32';
-    document.getElementById('btnChat').style.display = 'block';
-    document.getElementById('btnSeguridad').style.display = 'block';
     document.getElementById('btnPendientes').style.display = 'block';
     document.getElementById('btnEliminar').style.display = 'block';
     aplicarFiltros();
@@ -435,8 +431,6 @@ function logoutAdmin() {
   modoAdmin = false;
   document.getElementById('btnAdmin').textContent = '🔐 Administrar (desbloquear)';
   document.getElementById('btnAdmin').style.background = '#1a237e';
-  document.getElementById('btnChat').style.display = 'none';
-  document.getElementById('btnSeguridad').style.display = 'none';
   document.getElementById('btnPendientes').style.display = 'none';
   document.getElementById('btnEliminar').style.display = 'none';
   aplicarFiltros();
@@ -516,6 +510,82 @@ function validarPunto(id) {
   guardarPuntos();
   aplicarFiltros();
   alert('✅ Punto validado y visible para todos.');
+}
+
+// --- MOSTRAR PANEL DE PENDIENTES ---
+function mostrarPendientes() {
+  if (!modoAdmin) {
+    alert('🔐 Solo los administradores pueden ver puntos pendientes.');
+    return;
+  }
+  const pendientes = todosLosPuntos.filter(p => p.informacion?.estado === 'pendiente');
+  let panel = document.getElementById('panelPendientes');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'panelPendientes';
+    panel.style.cssText = `
+      display: none;
+      position: fixed;
+      top: 80px;
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      z-index: 9200;
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      overflow-y: auto;
+      flex-direction: column;
+    `;
+    document.body.appendChild(panel);
+  }
+  panel.style.display = 'flex';
+  let html = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h2 style="margin:0;">⏳ Puntos pendientes de aprobación</h2>
+      <button id="btnCerrarPendientes" style="background:#d32f2f;color:white;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:bold;">✖ Cerrar</button>
+    </div>
+  `;
+  if (pendientes.length === 0) {
+    html += `<p style="text-align:center;color:#666;padding:40px;">No hay puntos pendientes de aprobación.</p>`;
+  } else {
+    pendientes.forEach(p => {
+      const tipo = TIPOS[p.tipo];
+      if (!tipo) return;
+      html += `
+        <div style="background:#fffde7;border-left:4px solid #f57f17;padding:12px;margin-bottom:12px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+            <div>
+              <strong>${sanitizar(p.nombre)}</strong>
+              <span style="font-size:13px;color:#555;margin-left:8px;">${tipo.label}</span>
+              <span style="font-size:12px;background:#f57f17;color:white;padding:2px 8px;border-radius:12px;margin-left:8px;">⏳ Pendiente</span>
+            </div>
+            <div>
+              <button class="btn-aprobar" data-id="${p.id}" style="background:#2e7d32;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;margin-right:4px;">✅ Aprobar</button>
+              <button class="btn-rechazar" data-id="${p.id}" style="background:#d32f2f;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;">❌ Rechazar</button>
+            </div>
+          </div>
+          <div style="margin-top:6px;font-size:13px;color:#555;">
+            📍 Coordenadas: ${p.lat}, ${p.lng}
+            ${p.informacion?.direccion ? ` | 📌 ${sanitizar(p.informacion.direccion)}` : ''}
+            <div style="font-size:12px;color:#777;margin-top:4px;">
+              👤 Registrado por: ${sanitizar(p.informacion?.nombre_registrador || 'Anónimo')} (${sanitizar(p.informacion?.rol_registrador || 'Sin rol')})
+            </div>
+            ${p.informacion?.necesidades?.length ? `<div style="margin-top:4px;"><strong>Necesidades:</strong> ${p.informacion.necesidades.map(n => sanitizar(n)).join(', ')}</div>` : ''}
+          </div>
+        </div>
+      `;
+    });
+  }
+  panel.innerHTML = html;
+  document.getElementById('btnCerrarPendientes').addEventListener('click', function() { panel.style.display = 'none'; });
+  document.querySelectorAll('.btn-aprobar').forEach(btn => {
+    btn.addEventListener('click', function() { aprobarPunto(this.dataset.id); });
+  });
+  document.querySelectorAll('.btn-rechazar').forEach(btn => {
+    btn.addEventListener('click', function() { rechazarPunto(this.dataset.id); });
+  });
 }
 // ============================================================
 // BLOQUE 3: MAPA, FILTROS Y MOSTRAR PUNTOS
@@ -818,84 +888,6 @@ function onMapClick(e) {
   mostrarFormulario(tipoSeleccionado);
   obtenerDireccionDesdeCoordenadas(lat, lng);
 }
-
-// --- GESTIÓN DE PENDIENTES (PANEL) ---
-function mostrarPendientes() {
-  if (!modoAdmin) {
-    alert('🔐 Solo los administradores pueden ver puntos pendientes.');
-    return;
-  }
-  const pendientes = todosLosPuntos.filter(p => p.informacion?.estado === 'pendiente');
-  let panel = document.getElementById('panelPendientes');
-  if (!panel) {
-    panel = document.createElement('div');
-    panel.id = 'panelPendientes';
-    panel.style.cssText = `
-      display: none;
-      position: fixed;
-      top: 80px;
-      left: 10px;
-      right: 10px;
-      bottom: 10px;
-      z-index: 9200;
-      background: white;
-      border-radius: 12px;
-      padding: 16px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-      overflow-y: auto;
-      flex-direction: column;
-    `;
-    document.body.appendChild(panel);
-  }
-  panel.style.display = 'flex';
-  let html = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <h2 style="margin:0;">⏳ Puntos pendientes de aprobación</h2>
-      <button id="btnCerrarPendientes" style="background:#d32f2f;color:white;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:bold;">✖ Cerrar</button>
-    </div>
-  `;
-  if (pendientes.length === 0) {
-    html += `<p style="text-align:center;color:#666;padding:40px;">No hay puntos pendientes de aprobación.</p>`;
-  } else {
-    pendientes.forEach(p => {
-      const tipo = TIPOS[p.tipo];
-      if (!tipo) return;
-      html += `
-        <div style="background:#fffde7;border-left:4px solid #f57f17;padding:12px;margin-bottom:12px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-            <div>
-              <strong>${sanitizar(p.nombre)}</strong>
-              <span style="font-size:13px;color:#555;margin-left:8px;">${tipo.label}</span>
-              <span style="font-size:12px;background:#f57f17;color:white;padding:2px 8px;border-radius:12px;margin-left:8px;">⏳ Pendiente</span>
-            </div>
-            <div>
-              <button class="btn-aprobar" data-id="${p.id}" style="background:#2e7d32;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;margin-right:4px;">✅ Aprobar</button>
-              <button class="btn-rechazar" data-id="${p.id}" style="background:#d32f2f;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;">❌ Rechazar</button>
-            </div>
-          </div>
-          <div style="margin-top:6px;font-size:13px;color:#555;">
-            📍 Coordenadas: ${p.lat}, ${p.lng}
-            ${p.informacion?.direccion ? ` | 📌 ${sanitizar(p.informacion.direccion)}` : ''}
-            <div style="font-size:12px;color:#777;margin-top:4px;">
-              👤 Registrado por: ${sanitizar(p.informacion?.nombre_registrador || 'Anónimo')} (${sanitizar(p.informacion?.rol_registrador || 'Sin rol')})
-            </div>
-            ${p.informacion?.necesidades?.length ? `<div style="margin-top:4px;"><strong>Necesidades:</strong> ${p.informacion.necesidades.map(n => sanitizar(n)).join(', ')}</div>` : ''}
-          </div>
-        </div>
-      `;
-    });
-  }
-  panel.innerHTML = html;
-  document.getElementById('btnCerrarPendientes').addEventListener('click', function() { panel.style.display = 'none'; });
-  document.querySelectorAll('.btn-aprobar').forEach(btn => {
-    btn.addEventListener('click', function() { aprobarPunto(this.dataset.id); });
-  });
-  document.querySelectorAll('.btn-rechazar').forEach(btn => {
-    btn.addEventListener('click', function() { rechazarPunto(this.dataset.id); });
-  });
-}
-
-// --- FUNCIONES DE APROBACIÓN (ya están en el BLOQUE 2) ---
 // ============================================================
 // BLOQUE 5: MENÚ, FORMULARIOS, GUARDAR Y CANCELAR
 // ============================================================
@@ -903,8 +895,6 @@ function mostrarPendientes() {
 const menuOpciones = document.getElementById('menuOpciones');
 const btnAgregar = document.getElementById('btnAgregar');
 const btnAdmin = document.getElementById('btnAdmin');
-const btnChat = document.getElementById('btnChat');
-const btnSeguridad = document.getElementById('btnSeguridad');
 const btnPendientes = document.getElementById('btnPendientes');
 const formulario = document.getElementById('formulario');
 const formTitulo = document.getElementById('formTitulo');
@@ -983,7 +973,10 @@ btnGuardar.addEventListener('click', function() {
   informacion.direccion = datos.direccion || '';
   informacion.fecha_creacion = new Date().toLocaleString();
   informacion.fecha_edicion = informacion.fecha_creacion;
-  if (!modoAdmin) {
+  // Si es admin, el punto se aprueba automáticamente
+  if (modoAdmin) {
+    informacion.estado = 'aprobado';
+  } else {
     informacion.estado = 'pendiente';
   }
   const nuevoPunto = {
@@ -996,7 +989,7 @@ btnGuardar.addEventListener('click', function() {
   };
   todosLosPuntos.push(nuevoPunto);
   guardarPuntos();
-  alert(modoAdmin ? '✅ Punto guardado' : '✅ Punto enviado para aprobación. Los administradores lo revisarán.');
+  alert(modoAdmin ? '✅ Punto guardado y visible en el mapa' : '✅ Punto enviado para aprobación.');
   formulario.style.display = 'none';
   desactivarSeleccion();
   ubicacionSeleccionada = null;
@@ -1050,7 +1043,7 @@ document.getElementById('btnPendientes').addEventListener('click', function() {
   mostrarPendientes();
 });
 // ============================================================
-// BLOQUE 6: LISTA, CONTADORES, DETALLE, URGENCIAS Y GEOCODIFICACIÓN
+// BLOQUE 6: LISTA, CONTADORES, DETALLE, URGENCIAS Y BUSCADOR POR NECESIDAD
 // ============================================================
 
 function actualizarContadores() {
@@ -1076,7 +1069,7 @@ function actualizarContadores() {
   let html = '';
   for (const [key, val] of Object.entries(tipos)) {
     if (val.count > 0 || key === 'edificio_caido' || key === 'edificio_recogido') {
-      html += `<span style="background:#f0f0f0;padding:4px 10px;border-radius:16px;font-size:13px;font-weight:bold;">${val.label}: ${val.count}</span>`;
+      html += `<span style="background:#f0f0f0;padding:4px 10px;border-radius:16px;font-size:12px;font-weight:bold;">${val.label}: ${val.count}</span>`;
     }
   }
   contenedor.innerHTML = html;
@@ -1089,22 +1082,55 @@ function mostrarListaPuntos() {
   actualizarContadores();
   const contenedor = document.getElementById('contenedorLista');
   if (!contenedor) { alert('⚠️ Contenedor de lista no encontrado'); return; }
+  
   let puntosFiltrados = [...todosLosPuntos];
+  
+  // BÚSQUEDA POR NECESIDAD (prioridad)
+  if (busquedaNecesidad.trim() !== '') {
+    const texto = busquedaNecesidad.toLowerCase().trim();
+    puntosFiltrados = puntosFiltrados.filter(p => {
+      const necesidades = p.informacion?.necesidades || [];
+      return necesidades.some(n => n.toLowerCase().includes(texto));
+    });
+    // Actualizar título
+    const header = document.querySelector('#panelLista .header-lista h2');
+    if (header) {
+      header.innerHTML = `🔍 Resultados para: "${busquedaNecesidad}"`;
+    }
+  } else {
+    // FILTROS DE LISTA (si no hay búsqueda)
+    if (filtroLista && filtroLista !== 'todos') {
+      switch (filtroLista) {
+        case 'urgentes':
+          puntosFiltrados = puntosFiltrados.filter(p => p.informacion?.urgente === true);
+          break;
+        case 'recogidos':
+          puntosFiltrados = puntosFiltrados.filter(p => p.tipo === 'edificio_caido' && p.informacion?.recogido === true);
+          break;
+        case 'no_recogidos':
+          puntosFiltrados = puntosFiltrados.filter(p => p.tipo === 'edificio_caido' && p.informacion?.recogido !== true);
+          break;
+        default:
+          puntosFiltrados = puntosFiltrados.filter(p => p.tipo === filtroLista);
+          break;
+      }
+    }
+    // Restaurar título
+    const header = document.querySelector('#panelLista .header-lista h2');
+    if (header) {
+      header.innerHTML = '📋 Todos los puntos';
+    }
+  }
+  
+  // Si no es admin, solo mostrar aprobados
   if (!modoAdmin) {
     puntosFiltrados = puntosFiltrados.filter(p => p.informacion?.estado === 'aprobado');
   }
-  if (filtroLista && filtroLista !== 'todos') {
-    switch (filtroLista) {
-      case 'urgentes': puntosFiltrados = puntosFiltrados.filter(p => p.informacion?.urgente === true); break;
-      case 'recogidos': puntosFiltrados = puntosFiltrados.filter(p => p.tipo === 'edificio_caido' && p.informacion?.recogido === true); break;
-      case 'no_recogidos': puntosFiltrados = puntosFiltrados.filter(p => p.tipo === 'edificio_caido' && p.informacion?.recogido !== true); break;
-      default: puntosFiltrados = puntosFiltrados.filter(p => p.tipo === filtroLista); break;
-    }
-  }
+  
   puntosFiltrados.reverse();
   let html = '';
   if (puntosFiltrados.length === 0) {
-    html = '<p style="text-align:center;color:#666;padding:40px;">No hay puntos que coincidan con el filtro.</p>';
+    html = '<p style="text-align:center;color:#666;padding:40px;">No hay puntos que coincidan con la búsqueda o filtro.</p>';
   } else {
     puntosFiltrados.forEach(p => {
       const tipo = TIPOS[p.tipo];
@@ -1112,12 +1138,31 @@ function mostrarListaPuntos() {
       const esUrgente = p.informacion?.urgente || false;
       const recogido = p.tipo === 'edificio_caido' && p.informacion?.recogido;
       const estado = recogido ? '✅ Recogido' : (esUrgente ? '🚨 Urgente' : '');
+      
+      let necesidadesHtml = '';
+      if (busquedaNecesidad.trim() !== '') {
+        const necesidades = p.informacion?.necesidades || [];
+        const texto = busquedaNecesidad.toLowerCase().trim();
+        necesidadesHtml = necesidades.map(n => {
+          const idx = n.toLowerCase().indexOf(texto);
+          if (idx !== -1) {
+            const before = n.substring(0, idx);
+            const match = n.substring(idx, idx + texto.length);
+            const after = n.substring(idx + texto.length);
+            return before + '<span style="background:#ffeb3b;font-weight:bold;">' + match + '</span>' + after;
+          }
+          return n;
+        }).join(', ');
+        necesidadesHtml = `<div style="font-size:12px;color:#555;margin-top:4px;"><strong>Necesidad encontrada:</strong> ${necesidadesHtml}</div>`;
+      }
+      
       html += `
         <div class="item-lista" data-id="${p.id}" style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid #eee;cursor:pointer;background:${recogido ? '#f0f0f0' : 'white'};border-left:4px solid ${recogido ? '#757575' : tipo.color};margin-bottom:4px;border-radius:4px;">
           <div style="flex:1;">
             <strong>${sanitizar(p.nombre)}</strong>
             <span style="font-size:13px;color:#555;margin-left:8px;">${tipo.label}</span>
             ${estado ? `<span style="font-size:12px;background:${esUrgente ? '#d32f2f' : '#2e7d32'};color:white;padding:2px 8px;border-radius:12px;margin-left:8px;">${estado}</span>` : ''}
+            ${necesidadesHtml}
           </div>
           <span style="color:#1a73e8;font-size:12px;">👁️ Ver</span>
         </div>
@@ -1133,6 +1178,66 @@ function mostrarListaPuntos() {
   });
 }
 
+// --- BUSCADOR POR NECESIDAD ---
+function buscarPorNecesidad() {
+  const input = document.getElementById('buscadorNecesidades');
+  const texto = input.value.trim();
+  busquedaNecesidad = texto;
+  if (texto !== '') {
+    document.getElementById('panelLista').style.display = 'flex';
+    mostrarListaPuntos();
+    // Mostrar botón de limpiar búsqueda
+    const limpiarBtn = document.getElementById('btnLimpiarBusqueda');
+    if (limpiarBtn) limpiarBtn.style.display = 'inline-block';
+  } else {
+    busquedaNecesidad = '';
+    const limpiarBtn = document.getElementById('btnLimpiarBusqueda');
+    if (limpiarBtn) limpiarBtn.style.display = 'none';
+    // Si la lista está abierta, refrescar
+    if (document.getElementById('panelLista').style.display === 'flex') {
+      mostrarListaPuntos();
+    }
+  }
+}
+
+function limpiarBusquedaNecesidad() {
+  document.getElementById('buscadorNecesidades').value = '';
+  busquedaNecesidad = '';
+  const limpiarBtn = document.getElementById('btnLimpiarBusqueda');
+  if (limpiarBtn) limpiarBtn.style.display = 'none';
+  const header = document.querySelector('#panelLista .header-lista h2');
+  if (header) {
+    header.innerHTML = '📋 Todos los puntos';
+  }
+  if (document.getElementById('panelLista').style.display === 'flex') {
+    mostrarListaPuntos();
+  }
+}
+
+// --- EVENTOS DE BUSCADOR POR NECESIDAD ---
+document.getElementById('btnBuscarNecesidad').addEventListener('click', function() {
+  buscarPorNecesidad();
+});
+document.getElementById('buscadorNecesidades').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    buscarPorNecesidad();
+  }
+});
+
+// --- EVENTOS DE FILTROS DE LISTA ---
+document.addEventListener('DOMContentLoaded', function() {
+  const filtrosLista = document.querySelectorAll('#filtrosLista button');
+  filtrosLista.forEach(btn => {
+    btn.addEventListener('click', function() {
+      filtrosLista.forEach(b => b.classList.remove('activo'));
+      this.classList.add('activo');
+      filtroLista = this.dataset.tipo;
+      mostrarListaPuntos();
+    });
+  });
+});
+
+// --- RESTO DEL BLOQUE 6 (mostrarUrgencias, mostrarDetallePunto, cerrarLista, obtenerDireccionDesdeCoordenadas) ---
 function mostrarUrgencias() {
   const panel = document.getElementById('panelUrgencias');
   if (!panel) { alert('⚠️ Panel de urgencias no encontrado'); return; }
@@ -1274,6 +1379,15 @@ function mostrarDetallePunto(id) {
 function cerrarLista() {
   document.getElementById('panelLista').style.display = 'none';
   document.getElementById('panelDetalle').style.display = 'none';
+  // Limpiar búsqueda al cerrar
+  busquedaNecesidad = '';
+  document.getElementById('buscadorNecesidades').value = '';
+  const limpiarBtn = document.getElementById('btnLimpiarBusqueda');
+  if (limpiarBtn) limpiarBtn.style.display = 'none';
+  const header = document.querySelector('#panelLista .header-lista h2');
+  if (header) {
+    header.innerHTML = '📋 Todos los puntos';
+  }
 }
 
 function obtenerDireccionDesdeCoordenadas(lat, lng) {
@@ -1304,7 +1418,15 @@ function obtenerDireccionDesdeCoordenadas(lat, lng) {
 }
 
 // --- EVENTOS DE LISTA Y URGENCIAS ---
-document.getElementById('btnVerLista').addEventListener('click', function() { mostrarListaPuntos(); });
+document.getElementById('btnVerLista').addEventListener('click', function() { 
+  if (busquedaNecesidad.trim() !== '') {
+    mostrarListaPuntos();
+  } else {
+    const header = document.querySelector('#panelLista .header-lista h2');
+    if (header) header.innerHTML = '📋 Todos los puntos';
+    mostrarListaPuntos();
+  }
+});
 document.getElementById('btnCerrarLista').addEventListener('click', function() { cerrarLista(); });
 document.getElementById('btnCerrarDetalle').addEventListener('click', function() { document.getElementById('panelDetalle').style.display = 'none'; });
 document.getElementById('btnUrgencias').addEventListener('click', function() { mostrarUrgencias(); });
@@ -1544,92 +1666,8 @@ function mostrarFormularioEdicionPunto(puntoId) {
   });
 }
 // ============================================================
-// BLOQUE 8: CHAT LOCAL, FUNCIÓN TOGGLE, VERIFICACIÓN E INICIALIZACIÓN
+// BLOQUE 8: TOGGLE DE FILTROS, LIMPIAR BÚSQUEDA E INICIALIZACIÓN
 // ============================================================
-
-// --- CHAT LOCAL (SOLO LOCALSTORAGE) ---
-function cargarMensajesChat() {
-  const stored = localStorage.getItem('chatMensajes');
-  if (stored) {
-    try {
-      return JSON.parse(stored);
-    } catch (e) {
-      return [];
-    }
-  }
-  return [];
-}
-
-function guardarMensajesChat(mensajes) {
-  localStorage.setItem('chatMensajes', JSON.stringify(mensajes));
-}
-
-function renderizarChat() {
-  const contenedor = document.getElementById('mensajesChat');
-  const mensajes = cargarMensajesChat();
-  const nombreAdmin = localStorage.getItem('adminNombre') || 'Administrador';
-
-  let html = '';
-  mensajes.forEach(m => {
-    const esPropio = m.remitente === nombreAdmin;
-    html += `
-      <div class="mensaje-chat ${esPropio ? 'own' : ''}">
-        <div><strong>${sanitizar(m.remitente)}</strong>: ${sanitizar(m.texto)}</div>
-        <div class="meta">${sanitizar(m.fecha)}</div>
-      </div>
-    `;
-  });
-  contenedor.innerHTML = html;
-  contenedor.scrollTop = contenedor.scrollHeight;
-}
-
-function enviarMensajeChat() {
-  const input = document.getElementById('inputMensaje');
-  const texto = input.value.trim();
-  if (!texto) return;
-  const nombreAdmin = localStorage.getItem('adminNombre') || 'Administrador';
-  const mensajes = cargarMensajesChat();
-  mensajes.push({
-    remitente: sanitizar(nombreAdmin),
-    texto: sanitizar(texto),
-    fecha: new Date().toLocaleString()
-  });
-  guardarMensajesChat(mensajes);
-  renderizarChat();
-  input.value = '';
-}
-
-function abrirChat() {
-  if (!modoAdmin) {
-    alert('🔐 Solo los administradores pueden acceder al chat.');
-    return;
-  }
-  const nombre = prompt('👤 Ingresa tu nombre para el chat:', localStorage.getItem('adminNombre') || '');
-  if (nombre) {
-    localStorage.setItem('adminNombre', sanitizar(nombre));
-  }
-  document.getElementById('panelChat').style.display = 'flex';
-  renderizarChat();
-}
-
-// --- EVENTOS DEL CHAT ---
-document.getElementById('btnChat').addEventListener('click', function() {
-  abrirChat();
-});
-
-document.getElementById('btnCerrarChat').addEventListener('click', function() {
-  document.getElementById('panelChat').style.display = 'none';
-});
-
-document.getElementById('btnEnviarMensaje').addEventListener('click', function() {
-  enviarMensajeChat();
-});
-
-document.getElementById('inputMensaje').addEventListener('keypress', function(e) {
-  if (e.key === 'Enter') {
-    enviarMensajeChat();
-  }
-});
 
 // --- FUNCIÓN PARA DESPLEGAR MENSAJE DE ATENCIÓN ---
 function toggleMensaje(id) {
@@ -1645,8 +1683,72 @@ function toggleMensaje(id) {
   }
 }
 
+// ============================================================
+// TOGGLE DE FILTROS SUPERIORES (RESPONSIVE)
+// ============================================================
+document.addEventListener('DOMContentLoaded', function() {
+  const filtrosContainer = document.getElementById('filtrosContainer');
+  const btnToggle = document.getElementById('btnToggleFiltros');
+  
+  if (filtrosContainer && btnToggle) {
+    // Cargar estado guardado
+    const filtrosOcultos = localStorage.getItem('filtrosOcultos') === 'true';
+    
+    // Aplicar estado inicial
+    if (filtrosOcultos) {
+      filtrosContainer.style.maxHeight = '0px';
+      btnToggle.textContent = '🔼 Filtros';
+    } else {
+      filtrosContainer.style.maxHeight = '80px';
+      btnToggle.textContent = '🔽 Filtros';
+    }
+    
+    // Evento toggle
+    btnToggle.addEventListener('click', function() {
+      const isHidden = filtrosContainer.style.maxHeight === '0px';
+      if (isHidden) {
+        filtrosContainer.style.maxHeight = '80px';
+        btnToggle.textContent = '🔽 Filtros';
+        localStorage.setItem('filtrosOcultos', 'false');
+      } else {
+        filtrosContainer.style.maxHeight = '0px';
+        btnToggle.textContent = '🔼 Filtros';
+        localStorage.setItem('filtrosOcultos', 'true');
+      }
+    });
+  }
+  
+  // Agregar botón de limpiar búsqueda en el panel de lista
+  const headerLista = document.querySelector('#panelLista .header-lista');
+  if (headerLista) {
+    const limpiarBtn = document.createElement('button');
+    limpiarBtn.id = 'btnLimpiarBusqueda';
+    limpiarBtn.textContent = '✖ Limpiar búsqueda';
+    limpiarBtn.style.display = 'none';
+    limpiarBtn.style.background = '#666';
+    limpiarBtn.style.color = 'white';
+    limpiarBtn.style.border = 'none';
+    limpiarBtn.style.padding = '4px 12px';
+    limpiarBtn.style.borderRadius = '8px';
+    limpiarBtn.style.cursor = 'pointer';
+    limpiarBtn.style.fontWeight = 'bold';
+    limpiarBtn.style.fontSize = '12px';
+    headerLista.appendChild(limpiarBtn);
+    
+    limpiarBtn.addEventListener('click', function() {
+      limpiarBusquedaNecesidad();
+      this.style.display = 'none';
+      if (document.getElementById('panelLista').style.display === 'flex') {
+        const header = document.querySelector('#panelLista .header-lista h2');
+        if (header) header.innerHTML = '📋 Todos los puntos';
+        mostrarListaPuntos();
+      }
+    });
+  }
+});
+
 // --- INICIALIZACIÓN ---
 cargarPuntos();
 obtenerUbicacion();
 
-console.log('✅ App con todas las funcionalidades: localStorage, lista, urgencias, aprobación de puntos, chat local y seguridad.');
+console.log('✅ App responsiva con buscador por necesidades, lista, urgencias y aprobación de puntos.');
