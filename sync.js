@@ -10,12 +10,12 @@ if (typeof supabaseClient === 'undefined') {
 // 2. Función para convertir un punto de app.js a formato de tabla
 function puntoParaSupabase(punto) {
     return {
-        id: parseInt(punto.id),          // app.js usa string, Supabase usa BIGINT
+        id: parseInt(punto.id),
         tipo: punto.tipo,
         nombre: punto.nombre,
         lat: punto.lat,
         lng: punto.lng,
-        informacion: punto.informacion,   // objeto JSONB
+        informacion: punto.informacion,
         user_id: punto.user_id || null
     };
 }
@@ -23,7 +23,7 @@ function puntoParaSupabase(punto) {
 // 3. Función para convertir de Supabase a formato app.js
 function puntoDesdeSupabase(data) {
     return {
-        id: data.id.toString(),           // volver a string
+        id: data.id.toString(),
         tipo: data.tipo,
         nombre: data.nombre,
         lat: data.lat,
@@ -33,25 +33,28 @@ function puntoDesdeSupabase(data) {
     };
 }
 
-// 4. Función: Cargar puntos desde Supabase
+// 4. Función: Cargar puntos desde Supabase (con manejo de errores)
 async function cargarPuntosDesdeSupabase() {
-    const { data, error } = await supabaseClient
-        .from('puntos')
-        .select('*')
-        .order('id', { ascending: true });
+    try {
+        const { data, error } = await supabaseClient
+            .from('puntos')
+            .select('*')
+            .order('id', { ascending: true });
 
-    if (error) {
-        console.error('❌ Error al cargar desde Supabase:', error);
+        if (error) {
+            console.error('❌ Error al cargar desde Supabase:', error);
+            return [];
+        }
+        const puntos = data.map(puntoDesdeSupabase);
+        console.log(`☁️ ${puntos.length} puntos cargados desde la nube`);
+        return puntos;
+    } catch (e) {
+        console.error('❌ Excepción al cargar desde Supabase:', e);
         return [];
     }
-
-    // Convertir cada registro al formato de app.js
-    const puntos = data.map(puntoDesdeSupabase);
-    console.log(`☁️ ${puntos.length} puntos cargados desde la nube`);
-    return puntos;
 }
 
-// 5. NUEVA FUNCIÓN: Cargar puntos (prioriza la nube)
+// 5. NUEVA FUNCIÓN: Cargar puntos (prioriza la nube, con manejo de errores)
 async function cargarPuntos() {
     console.log('🔄 Iniciando carga de datos...');
 
@@ -71,9 +74,13 @@ async function cargarPuntos() {
                 puntos = JSON.parse(stored);
                 window.todosLosPuntos = puntos;
                 console.log('📂 Datos cargados desde localStorage (nube vacía)');
-                // Subir estos puntos a la nube para que otros los vean
-                await guardarPuntosEnNube(puntos);
-                console.log('☁️ Datos locales subidos a la nube');
+                // Subir estos puntos a la nube para que otros los vean (con try-catch)
+                try {
+                    await guardarPuntosEnNube(puntos);
+                    console.log('☁️ Datos locales subidos a la nube');
+                } catch (e) {
+                    console.warn('⚠️ No se pudieron subir a la nube:', e);
+                }
             } catch (e) {
                 puntos = [];
                 console.warn('⚠️ Error al parsear localStorage:', e);
@@ -99,15 +106,22 @@ async function cargarPuntos() {
             };
             puntos = [puntoEjemplo];
             localStorage.setItem('puntosMapaVida', JSON.stringify(puntos));
-            await guardarPuntosEnNube(puntos);
+            try {
+                await guardarPuntosEnNube(puntos);
+                console.log('☁️ Punto de ejemplo subido a la nube');
+            } catch (e) {
+                console.warn('⚠️ No se pudo subir el punto de ejemplo:', e);
+            }
             window.todosLosPuntos = puntos;
-            console.log('🆕 Punto de ejemplo creado y subido a la nube');
+            console.log('🆕 Punto de ejemplo creado');
         }
     }
 
     // Aplicar filtros para mostrar en el mapa
     if (typeof aplicarFiltros === 'function') {
         aplicarFiltros();
+    } else {
+        console.warn('⚠️ aplicarFiltros no está disponible');
     }
     console.log('✅ Carga finalizada');
 }
@@ -115,7 +129,7 @@ async function cargarPuntos() {
 // 6. SOBRESCRIBIR 'cargarPuntos' de app.js
 window.cargarPuntos = cargarPuntos;
 
-// 7. SOBRESCRIBIR 'guardarPuntos' de app.js
+// 7. SOBRESCRIBIR 'guardarPuntos' de app.js (con manejo de errores)
 window.guardarPuntos = async function() {
     // Primero guardar localmente (comportamiento original)
     localStorage.setItem('puntosMapaVida', JSON.stringify(window.todosLosPuntos));
@@ -153,10 +167,35 @@ window.sincronizarDesdeNube = async function() {
     }
 };
 
-// 9. EJECUTAR LA CARGA AHORA MISMO (después de sobrescribir)
-// Esto reemplaza la llamada original de app.js
-setTimeout(async () => {
-    await cargarPuntos();
-}, 100); // Pequeño retraso para asegurar que todo esté cargado
+// 9. EVITAR QUE APP.JS EJECUTE SU VERSIÓN ORIGINAL DE CARGAR PUNTOS
+//    Para ello, reemplazamos la función original por una que no haga nada
+//    y luego la ejecutamos nosotros mismos después de sobrescribir.
 
-console.log('🔄 sync.js cargado. Las funciones de guardado/carga ahora usan Supabase.');
+// Guardamos la función original de app.js (si existe)
+const originalCargarPuntos = window.cargarPuntos;
+
+// Reemplazamos temporalmente para que app.js no haga nada al final
+window.cargarPuntos = function() {
+    console.log('⏳ Carga diferida por sync.js');
+};
+
+// Ahora app.js ejecutará esta función vacía (no hará nada).
+// Luego de que app.js termine, ejecutamos nuestra versión real.
+
+// Esperamos a que el DOM esté listo y app.js haya terminado
+if (document.readyState === 'complete') {
+    // Si la página ya cargó, ejecutar inmediatamente
+    setTimeout(async () => {
+        // Restaurar la función original (por si acaso)
+        window.cargarPuntos = cargarPuntos;
+        await cargarPuntos();
+    }, 0);
+} else {
+    window.addEventListener('load', async function() {
+        // Restaurar la función original
+        window.cargarPuntos = cargarPuntos;
+        await cargarPuntos();
+    });
+}
+
+console.log('🔄 sync.js cargado. La carga de puntos ha sido diferida.');
