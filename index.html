@@ -15,7 +15,7 @@
   <!-- Leaflet Routing Machine JS -->
   <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
   
-  <!-- DOMPurify (para sanitizar HTML) -->
+  <!-- DOMPurify -->
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.0/dist/purify.min.js"></script>
   
   <style>
@@ -46,14 +46,11 @@
       width: 100%;
     }
     .grupo-busqueda {
-      display: flex;
       flex: 1;
       min-width: 140px;
-      gap: 4px;
     }
     .grupo-busqueda input {
-      flex: 1;
-      min-width: 80px;
+      width: 100%;
       padding: 8px 12px;
       border: 1px solid #ccc;
       border-radius: 20px;
@@ -62,22 +59,6 @@
       height: 38px;
     }
     .grupo-busqueda input:focus { border-color: #E53935; }
-    .grupo-busqueda button {
-      background: #E53935;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 12px;
-      white-space: nowrap;
-      height: 38px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .grupo-busqueda button:active { transform: scale(0.95); }
 
     .fila-botones {
       display: flex;
@@ -463,8 +444,7 @@
     /* ===== RESPONSIVE EXTRA ===== */
     @media (max-width: 480px) {
       #panelSuperior { padding: 8px 10px; }
-      .grupo-busqueda input { font-size: 13px; padding: 6px 10px; height: 34px; min-width: 60px; }
-      .grupo-busqueda button { font-size: 11px; padding: 4px 10px; height: 34px; }
+      .grupo-busqueda input { font-size: 13px; padding: 6px 10px; height: 34px; }
       .fila-botones button { font-size: 11px; padding: 4px 8px; height: 34px; }
       #filtros .filtro-btn { font-size: 10px; padding: 3px 8px; }
       #menuOpciones { min-width: 150px; }
@@ -490,9 +470,8 @@
       #contenedorContadores span { font-size: 11px; padding: 3px 8px; }
     }
     @media (max-width: 380px) {
-      .grupo-busqueda input { min-width: 50px; font-size: 12px; }
-      .grupo-busqueda button { font-size: 10px; padding: 3px 8px; }
-      .fila-botones button { font-size: 10px; padding: 3px 6px; }
+      .grupo-busqueda input { font-size: 12px; padding: 4px 8px; height: 30px; min-width: 50px; }
+      .fila-botones button { font-size: 10px; padding: 3px 6px; height: 30px; }
       #filtros .filtro-btn { font-size: 9px; padding: 2px 6px; }
       #menuOpciones { min-width: 130px; }
       #btnAgregar { font-size: 12px; padding: 8px 12px; min-width: 90px; }
@@ -505,17 +484,15 @@
     <div>Cargando mapa...</div>
   </div>
 
-  <!-- PANEL SUPERIOR (REORGANIZADO) -->
+  <!-- PANEL SUPERIOR (REORGANIZADO, SIN BOTONES DE BÚSQUEDA) -->
   <div id="panelSuperior">
-    <!-- Primera fila: dos buscadores lado a lado -->
+    <!-- Primera fila: dos buscadores (solo input) -->
     <div style="display:flex; flex-wrap:wrap; gap:6px; width:100%;">
       <div class="grupo-busqueda">
-        <input type="text" id="buscador" placeholder="Buscar ubicación..." />
-        <button id="btnBuscar">🔍 Ubicación</button>
+        <input type="text" id="buscador" placeholder="Buscar ubicación (presiona Enter)" />
       </div>
       <div class="grupo-busqueda">
-        <input type="text" id="buscadorNecesidades" placeholder="Buscar necesidad..." />
-        <button id="btnBuscarNecesidad">🔍 Necesidad</button>
+        <input type="text" id="buscadorNecesidades" placeholder="Buscar necesidad (presiona Enter)" />
       </div>
     </div>
 
@@ -526,7 +503,7 @@
       <button id="btnUrgencias">🚨 Urgencias</button>
     </div>
 
-    <!-- Tercera fila: contenedor de filtros (colapsable) -->
+    <!-- Tercera fila: filtros colapsables -->
     <div id="filtrosContainer">
       <div id="filtros">
         <button class="filtro-btn activo" data-tipo="todos">✅ Todos</button>
