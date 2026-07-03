@@ -128,20 +128,20 @@ const TIPOS = {
     }),
     popupDetalle: (info) => {
       let html = '';
-      // Mostrar insumos necesarios (prioridad)
+      // Mostrar insumos necesarios en una sola línea (compacto)
       if (info.necesita?.length) {
-        html += `<div class="popup-info" style="color:#d32f2f;font-weight:bold;font-size:14px;">📦 INSUMOS NECESARIOS:</div>`;
-        html += `<ul class="popup-lista" style="margin-bottom:6px;">`;
-        info.necesita.forEach(insumo => {
-          html += `<li style="font-weight:bold;color:#E53935;">${sanitizar(insumo)}</li>`;
-        });
-        html += `</ul>`;
+        const maxMostrar = 5;
+        const insumosMostrar = info.necesita.slice(0, maxMostrar);
+        const restantes = info.necesita.length - maxMostrar;
+        let textoInsumos = insumosMostrar.map(i => sanitizar(i)).join(', ');
+        if (restantes > 0) textoInsumos += ` y ${restantes} más...`;
+        html += `<div class="popup-info" style="color:#d32f2f;font-weight:bold;">📦 ${textoInsumos}</div>`;
       }
       if (info.suficientes?.length) {
         html += `<div class="popup-info" style="color:#2e7d32;">✅ Ya no necesitan: ${sanitizar(info.suficientes.join(', '))}</div>`;
       }
       if (info.necesidad_infantil) {
-        html += `<div class="popup-info" style="color:#FF6F00;">🧸 Necesitan recreación/cuidado para niños</div>`;
+        html += `<div class="popup-info" style="color:#FF6F00;">🧸 Cuidado infantil</div>`;
       }
       return html;
     }
@@ -334,17 +334,7 @@ const TIPOS = {
       urgente: d.urgente === 'Sí',
       necesidades: sanitizarArray(d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []),
       estado: 'pendiente',
-      fecha_creacion: new Date().toLocaleString(),
-      fecha_edicion: new Date().toLocaleString()
-    }),
-    popupDetalle: (info) => {
-      let html = '';
-      if (info.horario) html += `<div class="popup-info">🕐 Horario: ${sanitizar(info.horario)}</div>`;
-      if (info.contacto) html += `<div class="popup-info">📞 Contacto: ${sanitizar(info.contacto)}</div>`;
-      return html;
-    }
-  }
-};
+      fecha_creacion: new Date().toLocaleString()
 // ============================================================
 // BLOQUE 2: CARGA, GUARDADO, ADMIN Y GESTIÓN DE PENDIENTES
 // ============================================================
@@ -648,7 +638,8 @@ function mostrarPuntos(puntos) {
       className: ''
     });
 
-    const definicionTexto = tipo.definicion ? `<div class="popup-definicion">ℹ️ ${sanitizar(tipo.definicion)}</div>` : '';
+    // DEFINICIÓN ELIMINADA PARA COMPACTAR EL POPUP
+    const definicionTexto = ''; // Ocultamos la definición para no alargar el popup
     const nombreSanitizado = sanitizar(p.nombre);
     const direccionSanitizada = sanitizar(p.informacion?.direccion || '');
 
