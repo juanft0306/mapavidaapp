@@ -2,9 +2,9 @@
 // firebase.js - CONEXIÓN Y SERVICIOS PARA FIREBASE
 // ============================================================
 
-// 1. Configuración de Firebase (reemplaza con tus datos)
+// 1. Configuración de Firebase (RELLENA CON TUS DATOS)
 const firebaseConfig = {
-  apiKey: "AIzaSyBEvms5sGlH5VoyzueGji1Hie9CZSy7mF0",  // <--- REEMPLAZA
+  apiKey: "AIzaSyBEvms5sGlH5VoyzueGji1Hie9CZSy7mF0", // <--- PON AQUÍ TU API KEY
   authDomain: "mapavida-app.firebaseapp.com",
   databaseURL: "https://mapavida-app-default-rtdb.firebaseio.com",
   projectId: "mapavida-app",
@@ -19,7 +19,6 @@ const database = firebase.database();
 
 // 3. Función para GUARDAR puntos en Firebase
 function guardarPuntosEnFirebase(puntos) {
-  // Guardamos en la ruta 'puntos' de la base de datos
   return database.ref('puntos').set(puntos);
 }
 
@@ -28,9 +27,10 @@ function cargarPuntosDesdeFirebase() {
   return database.ref('puntos').once('value');
 }
 
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
+// 5. (Opcional) Escuchar cambios en tiempo real
+function escucharCambios(callback) {
+  database.ref('puntos').on('value', (snapshot) => {
+    const data = snapshot.val();
+    callback(data);
+  });
+}
