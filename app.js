@@ -897,7 +897,7 @@ function onMapClick(e) {
   obtenerDireccionDesdeCoordenadas(lat, lng);
 }
 // ============================================================
-// BLOQUE 5: MENÚ, FORMULARIOS, GUARDAR, CANCELAR Y BUSCADOR UNIFICADO
+// BLOQUE 5: MENÚ, FORMULARIOS, GUARDAR, CANCELAR Y BUSCADOR UNIFICADO (SIMPLIFICADO)
 // ============================================================
 
 const menuOpciones = document.getElementById('menuOpciones');
@@ -914,7 +914,7 @@ const btnEliminar = document.getElementById('btnEliminar');
 const btnCancelar = document.getElementById('btnCancelar');
 
 // ============================================================
-// MENÚ Y FORMULARIOS
+// MENÚ Y FORMULARIOS (sin cambios)
 // ============================================================
 btnAgregar.addEventListener('click', function(e) {
   e.stopPropagation();
@@ -967,7 +967,7 @@ function mostrarFormulario(tipo) {
 }
 
 // ============================================================
-// GUARDAR PUNTO
+// GUARDAR PUNTO (sin cambios)
 // ============================================================
 btnGuardar.addEventListener('click', function() {
   if (!tipoSeleccionado) { alert('Selecciona un tipo primero'); return; }
@@ -987,7 +987,6 @@ btnGuardar.addEventListener('click', function() {
   informacion.direccion = datos.direccion || '';
   informacion.fecha_creacion = new Date().toLocaleString();
   informacion.fecha_edicion = informacion.fecha_creacion;
-  // Si es admin, el punto se aprueba automáticamente
   if (modoAdmin) {
     informacion.estado = 'aprobado';
   } else {
@@ -1011,7 +1010,7 @@ btnGuardar.addEventListener('click', function() {
 });
 
 // ============================================================
-// CANCELAR
+// CANCELAR (sin cambios)
 // ============================================================
 btnCancelar.addEventListener('click', function() {
   const btnRegistro = document.getElementById('btnRegistrarVoluntario');
@@ -1028,7 +1027,7 @@ btnCancelar.addEventListener('click', function() {
 });
 
 // ============================================================
-// FILTROS DEL MAPA (superiores)
+// FILTROS DEL MAPA (sin cambios)
 // ============================================================
 document.querySelectorAll('#filtros .filtro-btn').forEach(btn => {
   btn.addEventListener('click', function() {
@@ -1044,7 +1043,7 @@ document.getElementById('btnPendientes').addEventListener('click', function() {
 });
 
 // ============================================================
-// BUSCADOR UNIFICADO (TOGGLE ENTRE UBICACIÓN Y NECESIDAD)
+// BUSCADOR UNIFICADO (SIMPLIFICADO)
 // ============================================================
 let modoBusqueda = 'ubicacion'; // 'ubicacion' o 'necesidad'
 
@@ -1057,18 +1056,12 @@ btnToggleModo.addEventListener('click', function() {
   if (modoBusqueda === 'ubicacion') {
     modoBusqueda = 'necesidad';
     btnToggleModo.textContent = '🏷️ Necesidad';
-    btnToggleModo.style.background = '#f57c00';
-    inputUnificado.placeholder = 'Buscar por necesidad (ej: agua, comida)';
-    // Cambiar borde del contenedor
-    inputUnificado.parentElement.style.borderColor = '#f57c00';
+    inputUnificado.placeholder = 'Buscar necesidad';
   } else {
     modoBusqueda = 'ubicacion';
     btnToggleModo.textContent = '📍 Ubicación';
-    btnToggleModo.style.background = '#1a237e';
-    inputUnificado.placeholder = 'Buscar ubicación (ej: Los Rosales)';
-    inputUnificado.parentElement.style.borderColor = '#1a73e8';
+    inputUnificado.placeholder = 'Buscar ubicación';
   }
-  // Limpiar input al cambiar
   inputUnificado.value = '';
 });
 
@@ -1078,10 +1071,8 @@ btnBuscarUnificado.addEventListener('click', function() {
   if (!texto) return;
 
   if (modoBusqueda === 'ubicacion') {
-    // Buscar ubicación con Nominatim
     buscarUbicacion(texto);
   } else {
-    // Buscar por necesidad
     buscarPorNecesidad(texto);
   }
 });
@@ -1093,7 +1084,7 @@ inputUnificado.addEventListener('keypress', function(e) {
   }
 });
 
-// Función para buscar ubicación (reutiliza la lógica anterior)
+// Función para buscar ubicación
 async function buscarUbicacion(query) {
   try {
     const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=ve`);
@@ -1109,7 +1100,7 @@ async function buscarUbicacion(query) {
   }
 }
 
-// Función para buscar por necesidad (reutiliza la lógica de BLOQUE 6)
+// Función para buscar por necesidad
 function buscarPorNecesidad(texto) {
   busquedaNecesidad = texto;
   document.getElementById('panelLista').style.display = 'flex';
@@ -1117,8 +1108,6 @@ function buscarPorNecesidad(texto) {
   const limpiarBtn = document.getElementById('btnLimpiarBusqueda');
   if (limpiarBtn) limpiarBtn.style.display = 'inline-block';
 }
-
-// Nota: las funciones mostrarListaPuntos, busquedaNecesidad, etc. están definidas en el BLOQUE 6
 // ============================================================
 // BLOQUE 6: LISTA, CONTADORES, DETALLE, URGENCIAS Y BUSCADOR POR NECESIDAD (CON RESALTADO Y PRIORIDAD)
 // ============================================================
