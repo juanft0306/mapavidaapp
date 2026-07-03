@@ -168,34 +168,17 @@ window.sincronizarDesdeNube = async function() {
 };
 
 // 9. EVITAR QUE APP.JS EJECUTE SU VERSIÓN ORIGINAL DE CARGAR PUNTOS
-//    Para ello, reemplazamos la función original por una que no haga nada
-//    y luego la ejecutamos nosotros mismos después de sobrescribir.
-
-// Guardamos la función original de app.js (si existe)
+//    Reemplazamos la función original por una vacía para que no haga nada.
 const originalCargarPuntos = window.cargarPuntos;
-
-// Reemplazamos temporalmente para que app.js no haga nada al final
 window.cargarPuntos = function() {
-    console.log('⏳ Carga diferida por sync.js');
+    console.log('⏳ Carga de app.js diferida por sync.js');
 };
 
-// Ahora app.js ejecutará esta función vacía (no hará nada).
-// Luego de que app.js termine, ejecutamos nuestra versión real.
-
-// Esperamos a que el DOM esté listo y app.js haya terminado
-if (document.readyState === 'complete') {
-    // Si la página ya cargó, ejecutar inmediatamente
-    setTimeout(async () => {
-        // Restaurar la función original (por si acaso)
-        window.cargarPuntos = cargarPuntos;
-        await cargarPuntos();
-    }, 0);
-} else {
-    window.addEventListener('load', async function() {
-        // Restaurar la función original
-        window.cargarPuntos = cargarPuntos;
-        await cargarPuntos();
-    });
-}
+// Esperamos a que app.js termine y luego ejecutamos nuestra carga
+window.addEventListener('load', async function() {
+    // Restauramos nuestra función real
+    window.cargarPuntos = cargarPuntos;
+    await cargarPuntos();
+});
 
 console.log('🔄 sync.js cargado. La carga de puntos ha sido diferida.');
