@@ -1,35 +1,24 @@
 // ============================================================
-// MAPAVIDA - BLOQUE 1: CONFIGURACIÓN DE FIREBASE, VARIABLES, SANITIZACIÓN, DEFINICIONES Y TIPOS
+// MAPAVIDA - BLOQUE 1: CONFIGURACIÓN, VARIABLES, DEFINICIONES Y TIPOS
 // ============================================================
 
 // ============================================================
-// CONFIGURACIÓN DE FIREBASE
+// MAPA (SIEMPRE CARGA)
 // ============================================================
-const firebaseConfig = {
-  apiKey: "AIzaSyDYNl6DCmxJLkc0HlnvkcEZ3L9J1agMl_c",
-  authDomain: "mapavida.firebaseapp.com",
-  projectId: "mapavida",
-  storageBucket: "mapavida.firebasestorage.app",
-  messagingSenderId: "125215899478",
-  appId: "1:125215899478:web:9018255a56f1f3ee3d60f7",
-  measurementId: "G-8PCPJ68R4Y"
-};
-
-// Inicializar Firebase
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-
-// ============================================================
-// CONFIGURACIÓN GENERAL
-// ============================================================
-const ADMIN_PASSWORD = 'MapaVida2026';
-const MASTER_PASSWORD = 'SeguridadMapa2026';
-
 const map = L.map('map').setView([10.4806, -66.9036], 12);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
   attribution: 'MapaVida'
 }).addTo(map);
+
+// OCULTAR LOADER INMEDIATAMENTE
+document.getElementById('cargando').style.display = 'none';
+
+// ============================================================
+// VARIABLES GLOBALES
+// ============================================================
+const ADMIN_PASSWORD = 'MapaVida2026';
+const MASTER_PASSWORD = 'SeguridadMapa2026';
 
 let todosLosPuntos = [];
 let markersLayer = L.layerGroup().addTo(map);
@@ -45,10 +34,8 @@ let controlRuta = null;
 let modoNavegacion = false;
 let filtroLista = 'todos';
 
-document.getElementById('cargando').style.display = 'none';
-
 // ============================================================
-// SANITIZACIÓN
+// SANITIZACIÓN (DOMPurify)
 // ============================================================
 function sanitizar(texto) {
   if (!texto) return '';
@@ -76,7 +63,7 @@ const DEFINICIONES = {
 };
 
 // ============================================================
-// TIPOS DE PUNTOS (con sanitización y estado pendiente)
+// TIPOS DE PUNTOS (CON SANITIZACIÓN Y ESTADO PENDIENTE)
 // ============================================================
 const TIPOS = {
   refugio: {
@@ -339,7 +326,7 @@ const TIPOS = {
       estado: 'pendiente',
       fecha_creacion: new Date().toLocaleString(),
       fecha_edicion: new Date().toLocaleString()
-    })
+    }),
     popupDetalle: (info) => {
       let html = '';
       if (info.horario) html += `<div class="popup-info">🕐 Horario: ${sanitizar(info.horario)}</div>`;
@@ -349,52 +336,23 @@ const TIPOS = {
   }
 };
 // ============================================================
-// BLOQUE 2: FIRESTORE Y AUTENTICACIÓN
+// BLOQUE 2: CARGA, GUARDADO, ADMIN, GESTIÓN DE PENDIENTES
 // ============================================================
 
-// --- CARGAR PUNTOS DESDE FIRESTORE ---
-async function cargarPuntos() {
-  try {
-    const snapshot = await db.collection('puntos')
-      .orderBy('created_at', 'desc')
-      .get();
-    if (snapshot.empty) {
-      cargarLocales();
-      return;
-    }
-    todosLosPuntos = [];
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      todosLosPuntos.push({
-        id: doc.id,
-        tipo: data.tipo || '',
-        nombre: data.nombre || '',
-        lat: data.lat || 0,
-        lng: data.lng || 0,
-        informacion: data.informacion || {},
-        user_id: data.user_id || null
-      });
-    });
-    aplicarFiltros();
-    console.log('✅ Datos cargados desde Firestore');
-  } catch (error) {
-    console.error('❌ Error al cargar desde Firestore:', error);
-    cargarLocales();
-  }
-}
-
-function cargarLocales() {
+// --- CARGAR PUNTOS DESDE LOCALSTORAGE ---
+function cargarPuntos() {
   const stored = localStorage.getItem('puntosMapaVida');
   if (stored) {
     try {
       todosLosPuntos = JSON.parse(stored);
       aplicarFiltros();
-      console.log('⚠️ Usando datos locales');
+      console.log('✅ Datos cargados desde localStorage');
     } catch (e) {
       todosLosPuntos = [];
       aplicarFiltros();
     }
   } else {
+    // Datos de ejemplo
     todosLosPuntos = [
       {
         id: '1', tipo: 'refugio', nombre: 'Refugio Los Rosales',
@@ -420,57 +378,27 @@ function cargarLocales() {
   }
 }
 
-// --- GUARDAR PUNTOS EN FIRESTORE ---
-async function guardarPuntos() {
-  try {
-    for (const punto of todosLosPuntos) {
-      const data = {
-        tipo: punto.tipo,
-        nombre: punto.nombre,
-        lat: punto.lat,
-        lng: punto.lng,
-        informacion: punto.informacion,
-        user_id: punto.user_id || null,
-        estado: punto.informacion?.estado || 'pendiente',
-        created_at: punto.informacion?.fecha_creacion || new Date().toISOString()
-      };
-      if (punto.id && punto.id.length > 10) {
-        await db.collection('puntos').doc(punto.id).set(data, { merge: true });
-      } else {
-        const docRef = await db.collection('puntos').add(data);
-        punto.id = docRef.id;
-      }
-    }
-    localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
-    console.log('✅ Datos sincronizados con Firestore');
-  } catch (error) {
-    console.error('❌ Error al guardar en Firestore:', error);
-    localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
-    alert('⚠️ Datos guardados solo localmente (falló la nube)');
-  }
+// --- GUARDAR PUNTOS EN LOCALSTORAGE ---
+function guardarPuntos() {
+  localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
+  console.log('✅ Datos guardados en localStorage');
 }
 
 // --- ELIMINAR PUNTO ---
-async function eliminarPunto(id) {
+function eliminarPunto(id) {
   if (!modoAdmin) {
     alert('🔐 Solo los administradores pueden eliminar puntos.');
     return;
   }
   if (!confirm('¿Seguro que quieres eliminar este punto de forma permanente?')) return;
-  try {
-    await db.collection('puntos').doc(id).delete();
-    todosLosPuntos = todosLosPuntos.filter(p => p.id !== id);
-    localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
-    aplicarFiltros();
-    alert('🗑️ Punto eliminado.');
-  } catch (error) {
-    console.error('❌ Error al eliminar:', error);
-    alert('❌ Error al eliminar. Intenta de nuevo.');
-  }
+  todosLosPuntos = todosLosPuntos.filter(p => p.id !== id);
+  guardarPuntos();
+  aplicarFiltros();
+  alert('🗑️ Punto eliminado.');
 }
 
 // --- MARCAR EDIFICIO COMO RECOGIDO ---
-async function marcarRecogido(id) {
+function marcarRecogido(id) {
   if (!modoAdmin) {
     alert('🔐 Solo los administradores pueden marcar como recogido.');
     return;
@@ -479,15 +407,9 @@ async function marcarRecogido(id) {
   if (!punto || punto.tipo !== 'edificio_caido' || punto.informacion.recogido) return;
   punto.informacion.recogido = true;
   punto.informacion.fecha_edicion = new Date().toLocaleString();
-  try {
-    await db.collection('puntos').doc(id).update({ informacion: punto.informacion });
-    localStorage.setItem('puntosMapaVida', JSON.stringify(todosLosPuntos));
-    aplicarFiltros();
-    alert('✅ Edificio marcado como recogido.');
-  } catch (error) {
-    console.error('❌ Error al actualizar:', error);
-    alert('❌ Error al guardar en la nube.');
-  }
+  guardarPuntos();
+  aplicarFiltros();
+  alert('✅ Edificio marcado como recogido y limpiado. ¡Gracias!');
 }
 
 // --- AUTENTICACIÓN ---
@@ -539,6 +461,62 @@ document.getElementById('btnAdmin').addEventListener('click', function() {
   const pass = prompt('🔐 Ingresa la contraseña de administrador:');
   if (pass !== null) loginAdmin(pass);
 });
+
+// --- GESTIÓN DE PENDIENTES ---
+function aprobarPunto(id) {
+  if (!modoAdmin) {
+    alert('🔐 Solo administradores pueden aprobar puntos.');
+    return;
+  }
+  const punto = todosLosPuntos.find(p => p.id === id);
+  if (!punto) return;
+  if (punto.informacion.estado === 'aprobado') {
+    alert('Este punto ya está aprobado.');
+    return;
+  }
+  punto.informacion.estado = 'aprobado';
+  punto.informacion.fecha_edicion = new Date().toLocaleString();
+  guardarPuntos();
+  aplicarFiltros();
+  document.getElementById('panelPendientes').style.display = 'none';
+  mostrarPendientes();
+  alert('✅ Punto aprobado y visible para todos.');
+}
+
+function rechazarPunto(id) {
+  if (!modoAdmin) {
+    alert('🔐 Solo administradores pueden rechazar puntos.');
+    return;
+  }
+  if (!confirm('¿Seguro que quieres rechazar este punto?')) return;
+  const punto = todosLosPuntos.find(p => p.id === id);
+  if (!punto) return;
+  punto.informacion.estado = 'rechazado';
+  punto.informacion.fecha_edicion = new Date().toLocaleString();
+  guardarPuntos();
+  aplicarFiltros();
+  document.getElementById('panelPendientes').style.display = 'none';
+  mostrarPendientes();
+  alert('❌ Punto rechazado.');
+}
+
+function validarPunto(id) {
+  if (!modoAdmin) {
+    alert('🔐 Solo administradores pueden validar puntos.');
+    return;
+  }
+  const punto = todosLosPuntos.find(p => p.id === id);
+  if (!punto) return;
+  if (punto.informacion.estado === 'aprobado') {
+    alert('Este punto ya está validado.');
+    return;
+  }
+  punto.informacion.estado = 'aprobado';
+  punto.informacion.fecha_edicion = new Date().toLocaleString();
+  guardarPuntos();
+  aplicarFiltros();
+  alert('✅ Punto validado y visible para todos.');
+}
 // ============================================================
 // BLOQUE 3: MAPA, FILTROS Y MOSTRAR PUNTOS
 // ============================================================
@@ -841,7 +819,7 @@ function onMapClick(e) {
   obtenerDireccionDesdeCoordenadas(lat, lng);
 }
 
-// --- GESTIÓN DE PENDIENTES ---
+// --- GESTIÓN DE PENDIENTES (PANEL) ---
 function mostrarPendientes() {
   if (!modoAdmin) {
     alert('🔐 Solo los administradores pueden ver puntos pendientes.');
@@ -917,46 +895,7 @@ function mostrarPendientes() {
   });
 }
 
-async function aprobarPunto(id) {
-  if (!modoAdmin) { alert('🔐 Solo administradores pueden aprobar puntos.'); return; }
-  const punto = todosLosPuntos.find(p => p.id === id);
-  if (!punto) return;
-  if (punto.informacion.estado === 'aprobado') { alert('Este punto ya está aprobado.'); return; }
-  punto.informacion.estado = 'aprobado';
-  punto.informacion.fecha_edicion = new Date().toLocaleString();
-  await guardarPuntos();
-  aplicarFiltros();
-  document.getElementById('panelPendientes').style.display = 'none';
-  mostrarPendientes();
-  alert('✅ Punto aprobado y visible para todos.');
-}
-
-async function rechazarPunto(id) {
-  if (!modoAdmin) { alert('🔐 Solo administradores pueden rechazar puntos.'); return; }
-  if (!confirm('¿Seguro que quieres rechazar este punto? No aparecerá en el mapa.')) return;
-  const punto = todosLosPuntos.find(p => p.id === id);
-  if (!punto) return;
-  punto.informacion.estado = 'rechazado';
-  punto.informacion.fecha_edicion = new Date().toLocaleString();
-  await guardarPuntos();
-  aplicarFiltros();
-  document.getElementById('panelPendientes').style.display = 'none';
-  mostrarPendientes();
-  alert('❌ Punto rechazado.');
-}
-
-// --- VALIDAR PUNTO (desde popup) ---
-async function validarPunto(id) {
-  if (!modoAdmin) { alert('🔐 Solo administradores pueden validar puntos.'); return; }
-  const punto = todosLosPuntos.find(p => p.id === id);
-  if (!punto) return;
-  if (punto.informacion.estado === 'aprobado') { alert('Este punto ya está validado.'); return; }
-  punto.informacion.estado = 'aprobado';
-  punto.informacion.fecha_edicion = new Date().toLocaleString();
-  await guardarPuntos();
-  aplicarFiltros();
-  alert('✅ Punto validado y visible para todos.');
-}
+// --- FUNCIONES DE APROBACIÓN (ya están en el BLOQUE 2) ---
 // ============================================================
 // BLOQUE 5: MENÚ, FORMULARIOS, GUARDAR Y CANCELAR
 // ============================================================
@@ -1026,7 +965,7 @@ function mostrarFormulario(tipo) {
   }
 }
 
-btnGuardar.addEventListener('click', async function() {
+btnGuardar.addEventListener('click', function() {
   if (!tipoSeleccionado) { alert('Selecciona un tipo primero'); return; }
   if (!ubicacionSeleccionada) { alert('Toca el mapa para seleccionar ubicación'); return; }
   const config = TIPOS[tipoSeleccionado];
@@ -1056,8 +995,8 @@ btnGuardar.addEventListener('click', async function() {
     informacion: informacion
   };
   todosLosPuntos.push(nuevoPunto);
-  await guardarPuntos();
-  alert(modoAdmin ? '✅ Punto guardado en la nube' : '✅ Punto enviado para aprobación. Los administradores lo revisarán.');
+  guardarPuntos();
+  alert(modoAdmin ? '✅ Punto guardado' : '✅ Punto enviado para aprobación. Los administradores lo revisarán.');
   formulario.style.display = 'none';
   desactivarSeleccion();
   ubicacionSeleccionada = null;
@@ -1405,7 +1344,7 @@ function mostrarFormularioVoluntarioInfantil(puntoId) {
   btnGuardar.style.display = 'none';
   btnEliminar.style.display = 'none';
   btnCancelar.style.display = 'none';
-  document.getElementById('btnRegistrarVoluntario').addEventListener('click', async function() {
+  document.getElementById('btnRegistrarVoluntario').addEventListener('click', function() {
     const nombre1 = document.getElementById('v_nombre1').value.trim();
     const nombre2 = document.getElementById('v_nombre2').value.trim();
     const apellido1 = document.getElementById('v_apellido1').value.trim();
@@ -1436,7 +1375,7 @@ function mostrarFormularioVoluntarioInfantil(puntoId) {
       mensaje: sanitizar(mensaje)
     });
     punto.informacion.fecha_edicion = new Date().toLocaleString();
-    await guardarPuntos();
+    guardarPuntos();
     alert('✅ Te has registrado como voluntario para actividades infantiles. ¡Gracias por tu ayuda!');
     formulario.style.display = 'none';
     btnGuardar.style.display = 'block';
@@ -1556,7 +1495,7 @@ function mostrarFormularioEdicionPunto(puntoId) {
   btnGuardar.style.display = 'none';
   btnEliminar.style.display = 'none';
   btnCancelar.style.display = 'none';
-  document.getElementById('btnGuardarEdicion').addEventListener('click', async function() {
+  document.getElementById('btnGuardarEdicion').addEventListener('click', function() {
     const datosEditados = {};
     let valido = true;
     tipo.campos.forEach(campo => {
@@ -1591,7 +1530,7 @@ function mostrarFormularioEdicionPunto(puntoId) {
       punto.nombre = datosEditados.nombre;
     }
     punto.informacion.fecha_edicion = new Date().toLocaleString();
-    await guardarPuntos();
+    guardarPuntos();
     alert('✅ Punto actualizado exitosamente');
     formulario.style.display = 'none';
     btnGuardar.style.display = 'block';
@@ -1605,28 +1544,31 @@ function mostrarFormularioEdicionPunto(puntoId) {
   });
 }
 // ============================================================
-// BLOQUE 8: CHAT DE ADMINISTRADORES, VERIFICACIÓN E INICIALIZACIÓN
+// BLOQUE 8: CHAT LOCAL, FUNCIÓN TOGGLE, VERIFICACIÓN E INICIALIZACIÓN
 // ============================================================
 
-// --- CHAT DE ADMINISTRADORES CON FIRESTORE ---
-const chatRef = db.collection('chatMensajes');
-
-function cargarChat() {
-  chatRef.orderBy('timestamp', 'asc').onSnapshot((snapshot) => {
-    const mensajes = [];
-    snapshot.forEach(doc => {
-      mensajes.push(doc.data());
-    });
-    renderizarChatFirestore(mensajes);
-  }, (error) => {
-    console.error('Error en chat:', error);
-  });
+// --- CHAT LOCAL (SOLO LOCALSTORAGE) ---
+function cargarMensajesChat() {
+  const stored = localStorage.getItem('chatMensajes');
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch (e) {
+      return [];
+    }
+  }
+  return [];
 }
 
-function renderizarChatFirestore(mensajes) {
+function guardarMensajesChat(mensajes) {
+  localStorage.setItem('chatMensajes', JSON.stringify(mensajes));
+}
+
+function renderizarChat() {
   const contenedor = document.getElementById('mensajesChat');
-  if (!contenedor) return;
+  const mensajes = cargarMensajesChat();
   const nombreAdmin = localStorage.getItem('adminNombre') || 'Administrador';
+
   let html = '';
   mensajes.forEach(m => {
     const esPropio = m.remitente === nombreAdmin;
@@ -1641,21 +1583,23 @@ function renderizarChatFirestore(mensajes) {
   contenedor.scrollTop = contenedor.scrollHeight;
 }
 
-function enviarMensajeChatFirestore() {
+function enviarMensajeChat() {
   const input = document.getElementById('inputMensaje');
   const texto = input.value.trim();
   if (!texto) return;
   const nombreAdmin = localStorage.getItem('adminNombre') || 'Administrador';
-  chatRef.add({
+  const mensajes = cargarMensajesChat();
+  mensajes.push({
     remitente: sanitizar(nombreAdmin),
     texto: sanitizar(texto),
-    fecha: new Date().toLocaleString(),
-    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    fecha: new Date().toLocaleString()
   });
+  guardarMensajesChat(mensajes);
+  renderizarChat();
   input.value = '';
 }
 
-function abrirChatFirestore() {
+function abrirChat() {
   if (!modoAdmin) {
     alert('🔐 Solo los administradores pueden acceder al chat.');
     return;
@@ -1665,22 +1609,25 @@ function abrirChatFirestore() {
     localStorage.setItem('adminNombre', sanitizar(nombre));
   }
   document.getElementById('panelChat').style.display = 'flex';
-  cargarChat();
+  renderizarChat();
 }
 
-// Eventos del chat
+// --- EVENTOS DEL CHAT ---
 document.getElementById('btnChat').addEventListener('click', function() {
-  abrirChatFirestore();
+  abrirChat();
 });
+
 document.getElementById('btnCerrarChat').addEventListener('click', function() {
   document.getElementById('panelChat').style.display = 'none';
 });
+
 document.getElementById('btnEnviarMensaje').addEventListener('click', function() {
-  enviarMensajeChatFirestore();
+  enviarMensajeChat();
 });
+
 document.getElementById('inputMensaje').addEventListener('keypress', function(e) {
   if (e.key === 'Enter') {
-    enviarMensajeChatFirestore();
+    enviarMensajeChat();
   }
 });
 
@@ -1698,47 +1645,8 @@ function toggleMensaje(id) {
   }
 }
 
-// --- VERIFICACIÓN DE ENLACE DE ENVÍO ---
-function verificarEnlaceEnvio() {
-  const params = new URLSearchParams(window.location.search);
-  const envioId = params.get('envio');
-  if (envioId) {
-    setTimeout(() => {
-      const envio = buscarEnvio(envioId);
-      if (envio) {
-        if (!envio.aprobacionOrigen) {
-          mostrarAprobacionOrigen(envioId);
-        } else if (envio.aprobacionOrigen && !envio.aprobacionConductor) {
-          mostrarFormularioConductor(envioId);
-        } else if (envio.aprobacionConductor && !envio.aprobacionDestino) {
-          mostrarAprobacionDestino(envioId);
-        } else {
-          alert('✅ Este envío ya está completado.');
-        }
-      } else {
-        alert('❌ Envío no encontrado o ya fue eliminado.');
-      }
-    }, 500);
-    window.history.replaceState({}, document.title, window.location.pathname);
-  }
-}
-
-// --- INICIALIZACIÓN PRINCIPAL ---
-document.addEventListener('DOMContentLoaded', function() {
-  const btnAdmin = document.getElementById('btnAdmin');
-  if (btnAdmin) {
-    btnAdmin.style.display = 'block';
-    console.log('✅ Botón de administrador mostrado');
-  } else {
-    console.warn('⚠️ Botón de administrador no encontrado en el DOM');
-  }
-});
-
-// Cargar datos y verificar sesión
+// --- INICIALIZACIÓN ---
 cargarPuntos();
 obtenerUbicacion();
 
-// Verificar enlace de envío después de cargar datos
-setTimeout(verificarEnlaceEnvio, 800);
-
-console.log('✅ App con todas las funcionalidades: autenticación, sanitización, lista, urgencias, aprobación triple, chat y seguridad.');
+console.log('✅ App con todas las funcionalidades: localStorage, lista, urgencias, aprobación de puntos, chat local y seguridad.');
