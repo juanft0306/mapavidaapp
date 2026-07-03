@@ -1010,24 +1010,23 @@ btnCancelar.addEventListener('click', function() {
   ubicacionSeleccionada = null;
 });
 
-document.getElementById('btnBuscar').addEventListener('click', async function() {
-  const query = document.getElementById('buscador').value.trim();
-  if (!query) return;
-  try {
-    const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=ve`);
-    const data = await resp.json();
-    if (data.length === 0) { alert('No se encontraron resultados'); return; }
-    const r = data[0];
-    const lat = parseFloat(r.lat);
-    const lon = parseFloat(r.lon);
-    map.setView([lat, lon], 15);
-    L.marker([lat, lon]).addTo(map).bindPopup(`📍 ${r.display_name}`).openPopup();
-  } catch (e) {
-    alert('Error al buscar: ' + e.message);
-  }
-});
+// Buscador de ubicación: se activa con Enter
 document.getElementById('buscador').addEventListener('keypress', function(e) {
-  if (e.key === 'Enter') document.getElementById('btnBuscar').click();
+  if (e.key === 'Enter') {
+    const query = this.value.trim();
+    if (!query) return;
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=ve`)
+      .then(resp => resp.json())
+      .then(data => {
+        if (data.length === 0) { alert('No se encontraron resultados'); return; }
+        const r = data[0];
+        const lat = parseFloat(r.lat);
+        const lon = parseFloat(r.lon);
+        map.setView([lat, lon], 15);
+        L.marker([lat, lon]).addTo(map).bindPopup(`📍 ${r.display_name}`).openPopup();
+      })
+      .catch(e => alert('Error al buscar: ' + e.message));
+  }
 });
 
 document.querySelectorAll('#filtros .filtro-btn').forEach(btn => {
@@ -1214,10 +1213,7 @@ function limpiarBusquedaNecesidad() {
   }
 }
 
-// --- EVENTOS DE BUSCADOR POR NECESIDAD ---
-document.getElementById('btnBuscarNecesidad').addEventListener('click', function() {
-  buscarPorNecesidad();
-});
+// Buscador de necesidades: se activa con Enter
 document.getElementById('buscadorNecesidades').addEventListener('keypress', function(e) {
   if (e.key === 'Enter') {
     buscarPorNecesidad();
