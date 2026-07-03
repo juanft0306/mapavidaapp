@@ -588,7 +588,7 @@ function mostrarPendientes() {
   });
 }
 // ============================================================
-// BLOQUE 3: MAPA, FILTROS Y MOSTRAR PUNTOS
+// BLOQUE 3: MAPA, FILTROS Y MOSTRAR PUNTOS (CON PRIORIDAD)
 // ============================================================
 
 function aplicarFiltros() {
@@ -665,6 +665,9 @@ function mostrarPuntos(puntos) {
       }
     }
 
+    // ============================================================
+    // BLOQUE DE PRIORIDAD Y NECESIDADES (MEJORADO)
+    // ============================================================
     const necesidades = p.informacion?.necesidades || [];
     const esUrgente = p.informacion?.urgente || false;
     if (necesidades.length > 0) {
@@ -681,6 +684,9 @@ function mostrarPuntos(puntos) {
       popupContent += `</ul></div>`;
     }
 
+    // ============================================================
+    // PROTECCIÓN INFANTIL
+    // ============================================================
     if (p.informacion?.necesidad_infantil && p.informacion?.voluntarios_infantiles !== undefined) {
       const mensajeId = 'mensaje_' + p.id;
       popupContent += `
@@ -711,7 +717,9 @@ function mostrarPuntos(puntos) {
       }
     }
 
-    // Botones de acción
+    // ============================================================
+    // BOTONES DE ACCIÓN
+    // ============================================================
     if (p.tipo === 'edificio_caido' && !recogido) {
       popupContent += `
         <button class="btn-recoger" data-id="${p.id}" style="margin-top:8px;background:#4CAF50;color:white;border:none;padding:6px 12px;border-radius:6px;cursor:pointer;font-weight:bold;width:100%;">
@@ -1043,8 +1051,11 @@ document.getElementById('btnPendientes').addEventListener('click', function() {
   mostrarPendientes();
 });
 // ============================================================
-// BLOQUE 6: LISTA, CONTADORES, DETALLE, URGENCIAS Y BUSCADOR POR NECESIDAD
+// BLOQUE 6: LISTA, CONTADORES, DETALLE, URGENCIAS Y BUSCADOR POR NECESIDAD (CON RESALTADO Y PRIORIDAD)
 // ============================================================
+
+let filtroLista = 'todos';
+let busquedaNecesidad = '';
 
 function actualizarContadores() {
   const contenedor = document.getElementById('contenedorContadores');
@@ -1149,7 +1160,7 @@ function mostrarListaPuntos() {
             const before = n.substring(0, idx);
             const match = n.substring(idx, idx + texto.length);
             const after = n.substring(idx + texto.length);
-            return before + '<span style="background:#ffeb3b;font-weight:bold;">' + match + '</span>' + after;
+            return before + '<span style="background:#ffeb3b;font-weight:bold;padding:0 2px;">' + match + '</span>' + after;
           }
           return n;
         }).join(', ');
@@ -1186,14 +1197,12 @@ function buscarPorNecesidad() {
   if (texto !== '') {
     document.getElementById('panelLista').style.display = 'flex';
     mostrarListaPuntos();
-    // Mostrar botón de limpiar búsqueda
     const limpiarBtn = document.getElementById('btnLimpiarBusqueda');
     if (limpiarBtn) limpiarBtn.style.display = 'inline-block';
   } else {
     busquedaNecesidad = '';
     const limpiarBtn = document.getElementById('btnLimpiarBusqueda');
     if (limpiarBtn) limpiarBtn.style.display = 'none';
-    // Si la lista está abierta, refrescar
     if (document.getElementById('panelLista').style.display === 'flex') {
       mostrarListaPuntos();
     }
@@ -1379,7 +1388,6 @@ function mostrarDetallePunto(id) {
 function cerrarLista() {
   document.getElementById('panelLista').style.display = 'none';
   document.getElementById('panelDetalle').style.display = 'none';
-  // Limpiar búsqueda al cerrar
   busquedaNecesidad = '';
   document.getElementById('buscadorNecesidades').value = '';
   const limpiarBtn = document.getElementById('btnLimpiarBusqueda');
