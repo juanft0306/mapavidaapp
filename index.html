@@ -42,13 +42,18 @@
     #panelSuperior > div:first-child {
       display: flex;
       flex-wrap: wrap;
-      align-items: center;
       gap: 6px;
       width: 100%;
     }
-    #panelSuperior input {
-      flex: 1 1 140px;
-      min-width: 100px;
+    .grupo-busqueda {
+      display: flex;
+      flex: 1;
+      min-width: 140px;
+      gap: 4px;
+    }
+    .grupo-busqueda input {
+      flex: 1;
+      min-width: 80px;
       padding: 8px 12px;
       border: 1px solid #ccc;
       border-radius: 20px;
@@ -56,8 +61,8 @@
       outline: none;
       height: 38px;
     }
-    #panelSuperior input:focus { border-color: #E53935; }
-    #panelSuperior button {
+    .grupo-busqueda input:focus { border-color: #E53935; }
+    .grupo-busqueda button {
       background: #E53935;
       color: white;
       border: none;
@@ -72,24 +77,47 @@
       align-items: center;
       justify-content: center;
     }
-    #panelSuperior button:active { transform: scale(0.95); }
-    #btnToggleFiltros {
-      background: #1a237e !important;
-      font-size: 12px !important;
-      padding: 6px 10px !important;
-      min-width: 70px;
+    .grupo-busqueda button:active { transform: scale(0.95); }
+
+    .fila-botones {
+      display: flex;
+      gap: 6px;
+      width: 100%;
+      margin-top: 6px;
     }
+    .fila-botones button {
+      flex: 1;
+      background: #E53935;
+      color: white;
+      border: none;
+      padding: 6px 8px;
+      border-radius: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 13px;
+      white-space: nowrap;
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .fila-botones button:active { transform: scale(0.95); }
+    .fila-botones button#btnToggleFiltros {
+      background: #1a237e !important;
+    }
+
     #filtrosContainer {
       overflow: hidden;
       transition: max-height 0.3s ease;
       max-height: 80px;
       width: 100%;
+      margin-top: 4px;
     }
     #filtros {
       display: flex;
       flex-wrap: wrap;
       gap: 4px;
-      margin-top: 6px;
       padding-bottom: 4px;
     }
     #filtros .filtro-btn {
@@ -116,7 +144,7 @@
       border-radius: 50%;
     }
 
-    /* ===== MENÚ FLOTANTE (RESPONSIVE) ===== */
+    /* ===== MENÚ FLOTANTE ===== */
     #menuContainer {
       position: fixed;
       bottom: 20px;
@@ -187,7 +215,7 @@
     #btnAdmin:active, #btnPendientes:active, #btnAuth:active { transform: scale(0.95); }
     #btnPendientes { background: #f57f17; }
 
-    /* ===== FORMULARIO PRINCIPAL (RESPONSIVE) ===== */
+    /* ===== FORMULARIOS ===== */
     #formulario, #formularioConductor, #panelAprobacionOrigen, #panelAprobacionDestino, #panelLogin {
       display: none;
       position: fixed;
@@ -260,7 +288,7 @@
     #btnLogin { background: #1a237e; color: white; }
     #btnCerrarLogin { background: #666; color: white; margin-top: 6px; }
 
-    /* ===== POPUPS DEL MAPA (RESPONSIVE) ===== */
+    /* ===== POPUPS ===== */
     .popup-tipo { font-weight: bold; color: #E53935; }
     .popup-info { font-size: 13px; margin: 3px 0; }
     .popup-distancia { font-size: 12px; color: #555; margin-top: 4px; }
@@ -280,7 +308,7 @@
       min-width: 200px;
     }
 
-    /* ===== PANEL DE LISTA, DETALLE, URGENCIAS (RESPONSIVE) ===== */
+    /* ===== PANELES (LISTA, DETALLE, URGENCIAS) ===== */
     #panelLista, #panelDetalle, #panelUrgencias {
       display: none;
       position: fixed;
@@ -435,9 +463,9 @@
     /* ===== RESPONSIVE EXTRA ===== */
     @media (max-width: 480px) {
       #panelSuperior { padding: 8px 10px; }
-      #panelSuperior input { font-size: 13px; padding: 6px 10px; height: 34px; min-width: 80px; }
-      #panelSuperior button { font-size: 11px; padding: 4px 10px; height: 34px; }
-      #btnToggleFiltros { font-size: 11px !important; padding: 4px 8px !important; min-width: 60px; }
+      .grupo-busqueda input { font-size: 13px; padding: 6px 10px; height: 34px; min-width: 60px; }
+      .grupo-busqueda button { font-size: 11px; padding: 4px 10px; height: 34px; }
+      .fila-botones button { font-size: 11px; padding: 4px 8px; height: 34px; }
       #filtros .filtro-btn { font-size: 10px; padding: 3px 8px; }
       #menuOpciones { min-width: 150px; }
       #menuOpciones button { font-size: 13px; padding: 8px 14px; }
@@ -462,9 +490,9 @@
       #contenedorContadores span { font-size: 11px; padding: 3px 8px; }
     }
     @media (max-width: 380px) {
-      #panelSuperior input { min-width: 60px; font-size: 12px; }
-      #panelSuperior button { font-size: 10px; padding: 3px 8px; }
-      #btnToggleFiltros { font-size: 10px !important; padding: 3px 6px !important; min-width: 50px; }
+      .grupo-busqueda input { min-width: 50px; font-size: 12px; }
+      .grupo-busqueda button { font-size: 10px; padding: 3px 8px; }
+      .fila-botones button { font-size: 10px; padding: 3px 6px; }
       #filtros .filtro-btn { font-size: 9px; padding: 2px 6px; }
       #menuOpciones { min-width: 130px; }
       #btnAgregar { font-size: 12px; padding: 8px 12px; min-width: 90px; }
@@ -477,24 +505,30 @@
     <div>Cargando mapa...</div>
   </div>
 
-  <!-- PANEL SUPERIOR (CON BUSCADOR DE UBICACIÓN Y DE NECESIDADES) -->
+  <!-- PANEL SUPERIOR (REORGANIZADO) -->
   <div id="panelSuperior">
-    <div style="display:flex; flex-wrap:wrap; align-items:center; gap:6px; width:100%;">
-      <!-- Buscador de ubicación -->
-      <input type="text" id="buscador" placeholder="Buscar ubicación (ej: Los Rosales, Caracas)" style="flex:2; min-width:120px;" />
-      <button id="btnBuscar">🔍 Ubicación</button>
-      
-      <!-- Buscador de necesidades -->
-      <input type="text" id="buscadorNecesidades" placeholder="Buscar por necesidad (ej: agua, comida)" style="flex:2; min-width:120px;" />
-      <button id="btnBuscarNecesidad">🔍 Necesidad</button>
-      
-      <button id="btnVerLista">📋 Lista</button>
-      <button id="btnUrgencias">🚨 Urgencias</button>
-      <button id="btnToggleFiltros" style="background:#1a237e; color:white; border:none; padding:6px 14px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; white-space:nowrap;">🔽 Filtros</button>
+    <!-- Primera fila: dos buscadores lado a lado -->
+    <div style="display:flex; flex-wrap:wrap; gap:6px; width:100%;">
+      <div class="grupo-busqueda">
+        <input type="text" id="buscador" placeholder="Buscar ubicación..." />
+        <button id="btnBuscar">🔍 Ubicación</button>
+      </div>
+      <div class="grupo-busqueda">
+        <input type="text" id="buscadorNecesidades" placeholder="Buscar necesidad..." />
+        <button id="btnBuscarNecesidad">🔍 Necesidad</button>
+      </div>
     </div>
-    <!-- CONTENEDOR DE FILTROS (OCULTABLE) -->
-    <div id="filtrosContainer" style="overflow:hidden; transition: max-height 0.3s ease; max-height: 80px;">
-      <div id="filtros" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; width:100%;">
+
+    <!-- Segunda fila: tres botones -->
+    <div class="fila-botones">
+      <button id="btnVerLista">📋 Lista</button>
+      <button id="btnToggleFiltros">🔽 Filtros</button>
+      <button id="btnUrgencias">🚨 Urgencias</button>
+    </div>
+
+    <!-- Tercera fila: contenedor de filtros (colapsable) -->
+    <div id="filtrosContainer">
+      <div id="filtros">
         <button class="filtro-btn activo" data-tipo="todos">✅ Todos</button>
         <button class="filtro-btn" data-tipo="refugio"><span class="color-bola" style="background:#2E7D32;"></span> Refugio</button>
         <button class="filtro-btn" data-tipo="centro_acopio"><span class="color-bola" style="background:#F57C00;"></span> Centro de acopio</button>
@@ -513,7 +547,7 @@
   <!-- MAPA -->
   <div id="map"></div>
 
-  <!-- MENÚ FLOTANTE (SIN CHAT, SIN SEGURIDAD) -->
+  <!-- MENÚ FLOTANTE -->
   <div id="menuContainer">
     <div id="menuOpciones">
       <button data-tipo="refugio"><span class="color-bola" style="background:#2E7D32;width:14px;height:14px;"></span> 🏠 Refugio</button>
@@ -619,8 +653,9 @@
     </select>
     <button id="btnAprobarDestino" style="margin-top:12px;background:#2e7d32;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">✅ Confirmar recepción</button>
     <button id="btnCancelarAprobacionDestino" style="margin-top:6px;background:#666;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">❌ Cancelar</button>
- </div>
-   <!-- PANEL DE LISTA (CON FILTROS FUNCIONALES) -->
+  </div>
+
+  <!-- PANEL DE LISTA -->
   <div id="panelLista">
     <div class="header-lista" id="headerLista">
       <h2>📋 Todos los puntos</h2>
@@ -667,7 +702,6 @@
 
   <!-- BOTÓN CANCELAR NAVEGACIÓN -->
   <button id="btnCancelarNavegacion">✖ Cancelar navegación</button>
-
-  <script src="app.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
