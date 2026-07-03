@@ -21,10 +21,10 @@
   <style>
     /* ===== RESET Y BASE ===== */
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; overflow: hidden; }
     #map { height: 100vh; width: 100%; }
 
-    /* ===== PANEL SUPERIOR ===== */
+    /* ===== PANEL SUPERIOR (RESPONSIVE) ===== */
     #panelSuperior {
       position: fixed;
       top: 10px;
@@ -33,49 +33,71 @@
       z-index: 5000;
       background: rgba(255,255,255,0.95);
       border-radius: 12px;
-      padding: 10px 14px;
+      padding: 10px 12px;
       box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+      backdrop-filter: blur(4px);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    #panelSuperior > div:first-child {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 8px;
-      backdrop-filter: blur(4px);
+      gap: 6px;
+      width: 100%;
     }
     #panelSuperior input {
-      flex: 1;
-      min-width: 140px;
+      flex: 1 1 140px;
+      min-width: 100px;
       padding: 8px 12px;
       border: 1px solid #ccc;
       border-radius: 20px;
       font-size: 14px;
       outline: none;
+      height: 38px;
     }
     #panelSuperior input:focus { border-color: #E53935; }
     #panelSuperior button {
       background: #E53935;
       color: white;
       border: none;
-      padding: 6px 14px;
+      padding: 6px 12px;
       border-radius: 20px;
       font-weight: bold;
       cursor: pointer;
-      font-size: 13px;
+      font-size: 12px;
       white-space: nowrap;
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
     #panelSuperior button:active { transform: scale(0.95); }
+    #btnToggleFiltros {
+      background: #1a237e !important;
+      font-size: 12px !important;
+      padding: 6px 10px !important;
+      min-width: 70px;
+    }
+    #filtrosContainer {
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+      max-height: 80px;
+      width: 100%;
+    }
     #filtros {
       display: flex;
       flex-wrap: wrap;
       gap: 4px;
-      margin-top: 4px;
-      width: 100%;
+      margin-top: 6px;
+      padding-bottom: 4px;
     }
     #filtros .filtro-btn {
       background: #eee;
       border: none;
-      padding: 4px 12px;
+      padding: 4px 10px;
       border-radius: 12px;
-      font-size: 12px;
+      font-size: 11px;
       cursor: pointer;
       transition: 0.2s;
       display: flex;
@@ -94,11 +116,11 @@
       border-radius: 50%;
     }
 
-    /* ===== MENÚ FLOTANTE ===== */
+    /* ===== MENÚ FLOTANTE (RESPONSIVE) ===== */
     #menuContainer {
       position: fixed;
-      bottom: 30px;
-      right: 20px;
+      bottom: 20px;
+      right: 16px;
       z-index: 5000;
       display: flex;
       flex-direction: column;
@@ -110,15 +132,17 @@
       background: white;
       border-radius: 12px;
       padding: 6px 0;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-      min-width: 190px;
+      min-width: 170px;
       overflow: hidden;
+      max-height: 70vh;
+      overflow-y: auto;
     }
     #menuOpciones button {
       background: white;
       border: none;
-      padding: 10px 18px;
+      padding: 10px 16px;
       text-align: left;
       font-size: 14px;
       border-bottom: 1px solid #f0f0f0;
@@ -135,80 +159,16 @@
       color: white;
       border: none;
       border-radius: 50px;
-      padding: 14px 24px;
-      font-size: 18px;
+      padding: 12px 20px;
+      font-size: 16px;
       font-weight: bold;
       box-shadow: 0 4px 12px rgba(0,0,0,0.4);
       cursor: pointer;
-      min-width: 150px;
+      min-width: 130px;
       text-align: center;
     }
     #btnAgregar:active { transform: scale(0.95); }
-    #btnAdmin {
-      background: #1a237e;
-      color: white;
-      border: none;
-      border-radius: 50px;
-      padding: 10px 18px;
-      font-size: 14px;
-      font-weight: bold;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-      cursor: pointer;
-      margin-bottom: 8px;
-      text-align: center;
-      width: 100%;
-      display: none;
-    }
-    #btnAdmin:active { transform: scale(0.95); }
-    #btnChat {
-      background: #00897B;
-      color: white;
-      border: none;
-      border-radius: 50px;
-      padding: 10px 18px;
-      font-size: 14px;
-      font-weight: bold;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-      cursor: pointer;
-      margin-bottom: 8px;
-      text-align: center;
-      width: 100%;
-      display: none;
-    }
-    #btnChat:active { transform: scale(0.95); }
-    #btnSeguridad {
-      display: none;
-      background: #1a237e;
-      color: white;
-      border: none;
-      border-radius: 50px;
-      padding: 10px 18px;
-      font-size: 14px;
-      font-weight: bold;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-      cursor: pointer;
-      margin-bottom: 8px;
-      text-align: center;
-      width: 100%;
-    }
-    #btnSeguridad:active { transform: scale(0.95); }
-    #btnPendientes {
-      display: none;
-      background: #f57f17;
-      color: white;
-      border: none;
-      border-radius: 50px;
-      padding: 10px 18px;
-      font-size: 14px;
-      font-weight: bold;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-      cursor: pointer;
-      margin-bottom: 8px;
-      text-align: center;
-      width: 100%;
-    }
-    #btnPendientes:active { transform: scale(0.95); }
-    #btnAuth {
+    #btnAdmin, #btnPendientes, #btnAuth {
       background: #1a237e;
       color: white;
       border: none;
@@ -218,22 +178,24 @@
       font-weight: bold;
       box-shadow: 0 4px 12px rgba(0,0,0,0.4);
       cursor: pointer;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       text-align: center;
       width: 100%;
-      display: block;
+      display: none;
     }
-    #btnAuth:active { transform: scale(0.95); }
+    #btnAuth { display: block; background: #1a237e; }
+    #btnAdmin:active, #btnPendientes:active, #btnAuth:active { transform: scale(0.95); }
+    #btnPendientes { background: #f57f17; }
 
-    /* ===== FORMULARIO PRINCIPAL ===== */
-    #formulario {
+    /* ===== FORMULARIO PRINCIPAL (RESPONSIVE) ===== */
+    #formulario, #formularioConductor, #panelAprobacionOrigen, #panelAprobacionDestino, #panelLogin {
       display: none;
       position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
       background: white;
-      padding: 25px 30px;
+      padding: 20px 24px;
       border-radius: 16px;
       box-shadow: 0 10px 40px rgba(0,0,0,0.6);
       z-index: 6000;
@@ -242,26 +204,29 @@
       max-height: 85vh;
       overflow-y: auto;
     }
-    #formulario h3 {
+    #formulario h3, #formularioConductor h3, #panelAprobacionOrigen h3, #panelAprobacionDestino h3, #panelLogin h2 {
       color: #E53935;
       margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      font-size: 18px;
     }
-    #formulario label {
+    #formulario label, #formularioConductor label, #panelAprobacionOrigen label, #panelAprobacionDestino label, #panelLogin label {
       display: block;
       margin: 10px 0 4px 0;
       font-weight: 600;
       font-size: 14px;
       color: #333;
     }
-    #formulario input, #formulario textarea, #formulario select {
+    #formulario input, #formulario textarea, #formulario select,
+    #formularioConductor input, #formularioConductor select,
+    #panelAprobacionOrigen input, #panelAprobacionOrigen select,
+    #panelAprobacionDestino input, #panelAprobacionDestino select,
+    #panelLogin input {
       width: 100%;
       padding: 10px;
       border: 1px solid #ccc;
       border-radius: 8px;
       font-size: 15px;
+      margin-bottom: 4px;
     }
     #formulario textarea { resize: vertical; min-height: 60px; }
     #formulario .coordenadas {
@@ -274,7 +239,7 @@
       font-size: 14px;
     }
     #formulario .coordenadas span { font-weight: bold; color: #E53935; }
-    #formulario button {
+    #formulario button, #formularioConductor button, #panelAprobacionOrigen button, #panelAprobacionDestino button, #panelLogin button {
       width: 100%;
       padding: 12px;
       margin-top: 10px;
@@ -292,117 +257,10 @@
       margin-top: 6px;
       display: none;
     }
-
-    /* ===== FORMULARIO LOGIN ===== */
-    #panelLogin {
-      display: none;
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      padding: 30px 35px;
-      border-radius: 16px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
-      z-index: 11000;
-      width: 92%;
-      max-width: 400px;
-      max-height: 85vh;
-      overflow-y: auto;
-    }
-    #panelLogin h2 { color: #1a237e; margin-bottom: 16px; text-align: center; }
-    #panelLogin label { display: block; margin: 10px 0 4px 0; font-weight: 600; font-size: 14px; color: #333; }
-    #panelLogin input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; }
-    #panelLogin button { width: 100%; padding: 12px; margin-top: 12px; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
     #btnLogin { background: #1a237e; color: white; }
     #btnCerrarLogin { background: #666; color: white; margin-top: 6px; }
 
-    /* ===== FORMULARIO CONDUCTOR ===== */
-    #formularioConductor {
-      display: none;
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      padding: 25px 30px;
-      border-radius: 16px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
-      z-index: 7000;
-      width: 92%;
-      max-width: 450px;
-      max-height: 85vh;
-      overflow-y: auto;
-    }
-    #formularioConductor h3 { color: #F57C00; margin-bottom: 12px; }
-    #formularioConductor label {
-      display: block;
-      margin: 10px 0 4px 0;
-      font-weight: 600;
-      font-size: 14px;
-      color: #333;
-    }
-    #formularioConductor input, #formularioConductor select {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      font-size: 15px;
-    }
-    #formularioConductor button {
-      width: 100%;
-      padding: 12px;
-      margin-top: 10px;
-      border: none;
-      border-radius: 8px;
-      font-weight: bold;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    #btnAceptarEnvio { background: #F57C00; color: white; }
-    #btnCancelarConductor { background: #666; color: white; margin-top: 6px; }
-
-    /* ===== PANELES DE APROBACIÓN ===== */
-    #panelAprobacionOrigen, #panelAprobacionDestino {
-      display: none;
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      padding: 25px 30px;
-      border-radius: 16px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
-      z-index: 7100;
-      width: 92%;
-      max-width: 450px;
-      max-height: 85vh;
-      overflow-y: auto;
-    }
-    #panelAprobacionOrigen h3 { color: #F57C00; }
-    #panelAprobacionDestino h3 { color: #2e7d32; }
-
-    /* ===== PANEL DE SEGURIDAD ===== */
-    #panelSeguridad {
-      display: none;
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      padding: 25px 30px;
-      border-radius: 16px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
-      z-index: 9600;
-      width: 92%;
-      max-width: 450px;
-      max-height: 85vh;
-      overflow-y: auto;
-    }
-    #panelSeguridad h3 { color: #1a237e; }
-    #panelSeguridad input[type="password"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; }
-
-    /* ===== POPUPS DEL MAPA ===== */
+    /* ===== POPUPS DEL MAPA (RESPONSIVE) ===== */
     .popup-tipo { font-weight: bold; color: #E53935; }
     .popup-info { font-size: 13px; margin: 3px 0; }
     .popup-distancia { font-size: 12px; color: #555; margin-top: 4px; }
@@ -414,9 +272,16 @@
     .popup-advertencia { color: #d32f2f; font-weight: bold; }
     .popup-definicion { font-size: 12px; color: #555; font-style: italic; margin: 2px 0 6px 0; background: #f9f9f9; padding: 4px 8px; border-radius: 4px; }
     .popup-registrador { font-size: 12px; color: #555; background: #f0f0f0; padding: 4px 8px; border-radius: 4px; margin-top: 4px; }
+    .leaflet-popup-content-wrapper {
+      max-width: 90vw !important;
+    }
+    .leaflet-popup-content {
+      max-width: 85vw !important;
+      min-width: 200px;
+    }
 
-    /* ===== PANEL DE LISTA ===== */
-    #panelLista {
+    /* ===== PANEL DE LISTA, DETALLE, URGENCIAS (RESPONSIVE) ===== */
+    #panelLista, #panelDetalle, #panelUrgencias {
       display: none;
       position: fixed;
       top: 80px;
@@ -431,7 +296,21 @@
       overflow-y: auto;
       flex-direction: column;
     }
-    #panelLista .header-lista {
+    #panelDetalle {
+      right: 10px;
+      width: auto;
+      left: 10px;
+      bottom: 10px;
+      top: 80px;
+    }
+    @media (min-width: 768px) {
+      #panelDetalle {
+        width: 380px;
+        right: 10px;
+        left: auto;
+      }
+    }
+    .header-lista, .header-detalle, .header-urgencias {
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -439,28 +318,32 @@
       flex-wrap: wrap;
       gap: 8px;
     }
-    #panelLista .header-lista h2 { margin: 0; }
-    #panelLista .header-lista button {
+    .header-lista h2, .header-urgencias h2, .header-detalle h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+    .header-lista button, .header-urgencias button, .header-detalle button {
       background: #d32f2f;
       color: white;
       border: none;
-      padding: 8px 16px;
+      padding: 6px 14px;
       border-radius: 8px;
       cursor: pointer;
       font-weight: bold;
+      font-size: 13px;
     }
     #filtrosLista {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
+      gap: 4px;
       margin-bottom: 12px;
     }
     #filtrosLista button {
       background: #eee;
       border: none;
-      padding: 4px 12px;
+      padding: 4px 10px;
       border-radius: 12px;
-      font-size: 12px;
+      font-size: 11px;
       cursor: pointer;
     }
     #filtrosLista button.activo {
@@ -470,14 +353,14 @@
     #contenedorContadores {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 6px;
       margin-bottom: 12px;
     }
     #contenedorContadores span {
       background: #f0f0f0;
       padding: 4px 10px;
       border-radius: 16px;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: bold;
     }
     .item-lista {
@@ -492,178 +375,19 @@
     }
     .item-lista:hover { background: #f5f5f5; }
 
-    /* ===== PANEL DE DETALLE ===== */
-    #panelDetalle {
-      display: none;
-      position: fixed;
-      top: 80px;
-      right: 10px;
-      width: 380px;
-      bottom: 10px;
-      z-index: 9500;
-      background: white;
-      border-radius: 12px;
-      padding: 16px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-      overflow-y: auto;
-      flex-direction: column;
-    }
-    @media (max-width: 480px) {
-      #panelDetalle { width: calc(100% - 20px); right: 10px; }
-    }
-    #panelDetalle .header-detalle {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-    #panelDetalle .header-detalle h3 { margin: 0; }
-    #panelDetalle .header-detalle button {
-      background: #666;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    /* ===== PANEL DE URGENCIAS ===== */
-    #panelUrgencias {
-      display: none;
-      position: fixed;
-      top: 80px;
-      left: 10px;
-      right: 10px;
-      bottom: 10px;
-      z-index: 9100;
-      background: white;
-      border-radius: 12px;
-      padding: 16px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-      overflow-y: auto;
-      flex-direction: column;
-    }
-    #panelUrgencias .header-urgencias {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-    #panelUrgencias .header-urgencias h2 { margin: 0; color: #d32f2f; }
-    #panelUrgencias .header-urgencias button {
-      background: #d32f2f;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    /* ===== CHAT ===== */
-    #panelChat {
-      display: none;
-      position: fixed;
-      bottom: 120px;
-      right: 20px;
-      width: 380px;
-      max-height: 500px;
-      background: white;
-      border-radius: 16px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-      z-index: 10000;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    @media (max-width: 480px) {
-      #panelChat { width: calc(100% - 40px); right: 20px; }
-    }
-    #panelChat .header-chat {
-      background: #00897B;
-      color: white;
-      padding: 12px 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    #panelChat .header-chat button {
-      background: rgba(255,255,255,0.3);
-      border: none;
-      color: white;
-      padding: 4px 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    #mensajesChat {
-      flex: 1;
-      padding: 12px;
-      overflow-y: auto;
-      max-height: 350px;
-      min-height: 200px;
-      background: #fafafa;
-    }
-    .mensaje-chat {
-      margin-bottom: 8px;
-      padding: 8px 12px;
-      border-radius: 12px;
-      background: #e0f2f1;
-      max-width: 80%;
-      word-wrap: break-word;
-    }
-    .mensaje-chat.own {
-      background: #b2dfdb;
-      margin-left: auto;
-    }
-    .mensaje-chat .meta {
-      font-size: 11px;
-      color: #555;
-      margin-top: 2px;
-      display: flex;
-      justify-content: space-between;
-    }
-    #inputChat {
-      display: flex;
-      padding: 8px;
-      border-top: 1px solid #ddd;
-      background: white;
-    }
-    #inputChat input {
-      flex: 1;
-      padding: 8px 12px;
-      border: 1px solid #ccc;
-      border-radius: 20px;
-      font-size: 14px;
-      outline: none;
-    }
-    #inputChat button {
-      background: #00897B;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 20px;
-      margin-left: 8px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
     /* ===== NAVEGACIÓN ===== */
     .leaflet-routing-container {
       background: white;
       border-radius: 8px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-      padding: 8px;
-      max-height: 200px;
+      padding: 6px;
+      max-height: 150px;
       overflow-y: auto;
-      font-size: 13px;
+      font-size: 12px;
       z-index: 7000 !important;
     }
     .leaflet-routing-container .leaflet-routing-alt {
       padding: 4px 8px;
-    }
-    .leaflet-routing-container .leaflet-routing-alt tr td {
-      padding: 2px 4px;
     }
     #btnCancelarNavegacion {
       position: fixed;
@@ -673,13 +397,14 @@
       background: #d32f2f;
       color: white;
       border: none;
-      padding: 12px 24px;
+      padding: 10px 20px;
       border-radius: 30px;
       font-weight: bold;
       z-index: 8000;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       cursor: pointer;
       display: none;
+      font-size: 14px;
     }
     #btnCancelarNavegacion:active { transform: scale(0.95); }
 
@@ -707,13 +432,42 @@
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-    /* ===== RESPONSIVE ===== */
+    /* ===== RESPONSIVE EXTRA ===== */
     @media (max-width: 480px) {
-      #panelSuperior input { font-size: 13px; padding: 6px 10px; }
-      #panelSuperior button { font-size: 12px; padding: 5px 12px; }
-      #menuOpciones { min-width: 160px; }
-      #btnAgregar { font-size: 16px; padding: 12px 18px; min-width: 120px; }
-      #filtros .filtro-btn { font-size: 10px; padding: 2px 8px; }
+      #panelSuperior { padding: 8px 10px; }
+      #panelSuperior input { font-size: 13px; padding: 6px 10px; height: 34px; min-width: 80px; }
+      #panelSuperior button { font-size: 11px; padding: 4px 10px; height: 34px; }
+      #btnToggleFiltros { font-size: 11px !important; padding: 4px 8px !important; min-width: 60px; }
+      #filtros .filtro-btn { font-size: 10px; padding: 3px 8px; }
+      #menuOpciones { min-width: 150px; }
+      #menuOpciones button { font-size: 13px; padding: 8px 14px; }
+      #btnAgregar { font-size: 14px; padding: 10px 16px; min-width: 110px; }
+      #btnAdmin, #btnPendientes, #btnAuth { font-size: 12px; padding: 6px 14px; }
+      #formulario, #formularioConductor, #panelAprobacionOrigen, #panelAprobacionDestino, #panelLogin {
+        padding: 16px 18px;
+        width: 95%;
+        max-width: 100%;
+      }
+      #formulario h3, #formularioConductor h3, #panelAprobacionOrigen h3, #panelAprobacionDestino h3, #panelLogin h2 {
+        font-size: 16px;
+      }
+      .leaflet-popup-content { max-width: 80vw !important; min-width: 160px; }
+      #panelLista, #panelDetalle, #panelUrgencias {
+        padding: 12px;
+        top: 70px;
+      }
+      .header-lista h2, .header-urgencias h2, .header-detalle h3 { font-size: 16px; }
+      .item-lista { padding: 8px 10px; font-size: 13px; }
+      #filtrosLista button { font-size: 10px; padding: 3px 8px; }
+      #contenedorContadores span { font-size: 11px; padding: 3px 8px; }
+    }
+    @media (max-width: 380px) {
+      #panelSuperior input { min-width: 60px; font-size: 12px; }
+      #panelSuperior button { font-size: 10px; padding: 3px 8px; }
+      #btnToggleFiltros { font-size: 10px !important; padding: 3px 6px !important; min-width: 50px; }
+      #filtros .filtro-btn { font-size: 9px; padding: 2px 6px; }
+      #menuOpciones { min-width: 130px; }
+      #btnAgregar { font-size: 12px; padding: 8px 12px; min-width: 90px; }
     }
   </style>
 </head>
@@ -723,31 +477,43 @@
     <div>Cargando mapa...</div>
   </div>
 
-  <!-- PANEL SUPERIOR -->
+  <!-- PANEL SUPERIOR (CON BUSCADOR DE UBICACIÓN Y DE NECESIDADES) -->
   <div id="panelSuperior">
-    <input type="text" id="buscador" placeholder="Buscar ubicación (ej: Los Rosales, Caracas)" />
-    <button id="btnBuscar">🔍 Buscar</button>
-    <button id="btnVerLista">📋 Lista de puntos</button>
-    <button id="btnUrgencias">🚨 Urgencias</button>
-    <div id="filtros">
-      <button class="filtro-btn activo" data-tipo="todos">✅ Todos</button>
-      <button class="filtro-btn" data-tipo="refugio"><span class="color-bola" style="background:#2E7D32;"></span> Refugio</button>
-      <button class="filtro-btn" data-tipo="centro_acopio"><span class="color-bola" style="background:#F57C00;"></span> Centro de acopio</button>
-      <button class="filtro-btn" data-tipo="hospital"><span class="color-bola" style="background:#1976D2;"></span> Hospital</button>
-      <button class="filtro-btn" data-tipo="edificio_caido"><span class="color-bola" style="background:#C62828;"></span> Edificio caído</button>
-      <button class="filtro-btn" data-tipo="edificio_recogido"><span class="color-bola" style="background:#757575;"></span> Recogidos</button>
-      <button class="filtro-btn" data-tipo="peligro_derrumbe"><span class="color-bola" style="background:#E65100;"></span> Peligro de derrumbe</button>
-      <button class="filtro-btn" data-tipo="sin_inspeccionar"><span class="color-bola" style="background:#6A1B9A;"></span> Sin inspeccionar</button>
-      <button class="filtro-btn" data-tipo="veterinaria"><span class="color-bola" style="background:#00897B;"></span> Atención veterinaria</button>
-      <button class="filtro-btn" data-tipo="ayuda_psicologica"><span class="color-bola" style="background:#8E24AA;"></span> Ayuda psicológica</button>
-      <button class="filtro-btn" data-tipo="vacuna_tetanos"><span class="color-bola" style="background:#0D47A1;"></span> Vacuna antitetánica</button>
+    <div style="display:flex; flex-wrap:wrap; align-items:center; gap:6px; width:100%;">
+      <!-- Buscador de ubicación -->
+      <input type="text" id="buscador" placeholder="Buscar ubicación (ej: Los Rosales, Caracas)" style="flex:2; min-width:120px;" />
+      <button id="btnBuscar">🔍 Ubicación</button>
+      
+      <!-- Buscador de necesidades -->
+      <input type="text" id="buscadorNecesidades" placeholder="Buscar por necesidad (ej: agua, comida)" style="flex:2; min-width:120px;" />
+      <button id="btnBuscarNecesidad">🔍 Necesidad</button>
+      
+      <button id="btnVerLista">📋 Lista</button>
+      <button id="btnUrgencias">🚨 Urgencias</button>
+      <button id="btnToggleFiltros" style="background:#1a237e; color:white; border:none; padding:6px 14px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; white-space:nowrap;">🔽 Filtros</button>
+    </div>
+    <!-- CONTENEDOR DE FILTROS (OCULTABLE) -->
+    <div id="filtrosContainer" style="overflow:hidden; transition: max-height 0.3s ease; max-height: 80px;">
+      <div id="filtros" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; width:100%;">
+        <button class="filtro-btn activo" data-tipo="todos">✅ Todos</button>
+        <button class="filtro-btn" data-tipo="refugio"><span class="color-bola" style="background:#2E7D32;"></span> Refugio</button>
+        <button class="filtro-btn" data-tipo="centro_acopio"><span class="color-bola" style="background:#F57C00;"></span> Centro de acopio</button>
+        <button class="filtro-btn" data-tipo="hospital"><span class="color-bola" style="background:#1976D2;"></span> Hospital</button>
+        <button class="filtro-btn" data-tipo="edificio_caido"><span class="color-bola" style="background:#C62828;"></span> Edificio caído</button>
+        <button class="filtro-btn" data-tipo="edificio_recogido"><span class="color-bola" style="background:#757575;"></span> Recogidos</button>
+        <button class="filtro-btn" data-tipo="peligro_derrumbe"><span class="color-bola" style="background:#E65100;"></span> Peligro de derrumbe</button>
+        <button class="filtro-btn" data-tipo="sin_inspeccionar"><span class="color-bola" style="background:#6A1B9A;"></span> Sin inspeccionar</button>
+        <button class="filtro-btn" data-tipo="veterinaria"><span class="color-bola" style="background:#00897B;"></span> Atención veterinaria</button>
+        <button class="filtro-btn" data-tipo="ayuda_psicologica"><span class="color-bola" style="background:#8E24AA;"></span> Ayuda psicológica</button>
+        <button class="filtro-btn" data-tipo="vacuna_tetanos"><span class="color-bola" style="background:#0D47A1;"></span> Vacuna antitetánica</button>
+      </div>
     </div>
   </div>
 
   <!-- MAPA -->
   <div id="map"></div>
 
-  <!-- MENÚ FLOTANTE -->
+  <!-- MENÚ FLOTANTE (SIN CHAT, SIN SEGURIDAD) -->
   <div id="menuContainer">
     <div id="menuOpciones">
       <button data-tipo="refugio"><span class="color-bola" style="background:#2E7D32;width:14px;height:14px;"></span> 🏠 Refugio</button>
@@ -762,8 +528,6 @@
     </div>
     <button id="btnAuth" style="display:block;">🔐 Iniciar sesión</button>
     <button id="btnAdmin" style="display:none;">🔐 Administrar (desbloquear)</button>
-    <button id="btnChat" style="display:none;">💬 Chat administradores</button>
-    <button id="btnSeguridad" style="display:none;">🔐 Seguridad</button>
     <button id="btnPendientes" style="display:none;">⏳ Pendientes</button>
     <button id="btnAgregar">➕ Agregar</button>
   </div>
@@ -856,28 +620,7 @@
     <button id="btnAprobarDestino" style="margin-top:12px;background:#2e7d32;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">✅ Confirmar recepción</button>
     <button id="btnCancelarAprobacionDestino" style="margin-top:6px;background:#666;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">❌ Cancelar</button>
   </div>
-
-  <!-- PANEL DE SEGURIDAD -->
-  <div id="panelSeguridad">
-    <h3>🔐 Seguridad</h3>
-    <div id="contactoEmergencia" style="background:#f0f0f0;padding:10px;border-radius:8px;margin-bottom:12px;text-align:center;">
-      <strong>📞 Número de contacto para emergencias:</strong>
-      <span id="displayContacto" style="display:block;font-size:18px;color:#1a237e;margin-top:4px;">No configurado</span>
-      <button id="btnEditarContacto" style="margin-top:6px;background:#1a237e;color:white;border:none;padding:4px 12px;border-radius:12px;cursor:pointer;">✏️ Editar</button>
-    </div>
-    <hr style="margin:12px 0;">
-    <h4 style="color:#d32f2f;">⚠️ Cambiar contraseña de administrador</h4>
-    <p style="font-size:13px;color:#555;margin-bottom:10px;">Solo el programador puede realizar este cambio.</p>
-    <label>Contraseña maestra *</label>
-    <input type="password" id="inputMasterPassword" placeholder="Ingresa la contraseña maestra" required />
-    <label>Nueva contraseña (7 dígitos alfanuméricos) *</label>
-    <input type="password" id="inputNuevaPassword" placeholder="Ej: A1B2C3D" maxlength="7" required />
-    <label>Confirmar nueva contraseña *</label>
-    <input type="password" id="inputConfirmPassword" placeholder="Repite la nueva contraseña" maxlength="7" required />
-    <button id="btnCambiarPassword" style="margin-top:12px;background:#d32f2f;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">🔄 Cambiar contraseña</button>
-    <button id="btnCerrarSeguridad" style="margin-top:6px;background:#666;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">❌ Cerrar</button>
-  </div>
-    <!-- PANEL DE LISTA -->
+    <!-- PANEL DE LISTA (CON FILTROS FUNCIONALES) -->
   <div id="panelLista">
     <div class="header-lista" id="headerLista">
       <h2>📋 Todos los puntos</h2>
@@ -920,19 +663,6 @@
       <button id="btnCerrarUrgencias">✖ Cerrar</button>
     </div>
     <div class="panel-contenido" id="contenedorUrgencias"></div>
-  </div>
-
-  <!-- CHAT -->
-  <div id="panelChat">
-    <div class="header-chat">
-      <span>💬 Chat administradores</span>
-      <button id="btnCerrarChat">✖</button>
-    </div>
-    <div id="mensajesChat"></div>
-    <div id="inputChat">
-      <input type="text" id="inputMensaje" placeholder="Escribe un mensaje..." />
-      <button id="btnEnviarMensaje">Enviar</button>
-    </div>
   </div>
 
   <!-- BOTÓN CANCELAR NAVEGACIÓN -->
