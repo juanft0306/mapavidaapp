@@ -128,7 +128,18 @@ const TIPOS = {
     }),
     popupDetalle: (info) => {
       let html = '';
-      if (info.suficientes?.length) html += `<div class="popup-info" style="color:#2e7d32;">✅ Ya no necesitan: ${sanitizar(info.suficientes.join(', '))}</div>`;
+      // Mostrar insumos necesarios (prioridad)
+      if (info.necesita?.length) {
+        html += `<div class="popup-info" style="color:#d32f2f;font-weight:bold;font-size:14px;">📦 INSUMOS NECESARIOS:</div>`;
+        html += `<ul class="popup-lista" style="margin-bottom:6px;">`;
+        info.necesita.forEach(insumo => {
+          html += `<li style="font-weight:bold;color:#E53935;">${sanitizar(insumo)}</li>`;
+        });
+        html += `</ul>`;
+      }
+      if (info.suficientes?.length) {
+        html += `<div class="popup-info" style="color:#2e7d32;">✅ Ya no necesitan: ${sanitizar(info.suficientes.join(', '))}</div>`;
+      }
       if (info.necesidad_infantil) {
         html += `<div class="popup-info" style="color:#FF6F00;">🧸 Necesitan recreación/cuidado para niños</div>`;
       }
@@ -1084,12 +1095,19 @@ function mostrarListaPuntos() {
   
   let puntosFiltrados = [...todosLosPuntos];
   
-  // BÚSQUEDA POR NECESIDAD (prioridad)
+  // BÚSQUEDA POR NECESIDAD (prioridad) - AHORA BUSCA EN NECESIDADES E INSUMOS
   if (busquedaNecesidad.trim() !== '') {
     const texto = busquedaNecesidad.toLowerCase().trim();
     puntosFiltrados = puntosFiltrados.filter(p => {
+      // Buscar en necesidades detalladas
       const necesidades = p.informacion?.necesidades || [];
-      return necesidades.some(n => n.toLowerCase().includes(texto));
+      const coincideNecesidad = necesidades.some(n => n.toLowerCase().includes(texto));
+      
+      // Buscar en insumos necesarios (centros de acopio)
+      const insumos = p.informacion?.necesita || [];
+      const coincideInsumo = insumos.some(i => i.toLowerCase().includes(texto));
+      
+      return coincideNecesidad || coincideInsumo;
     });
     // Actualizar título
     const header = document.querySelector('#panelLista .header-lista h2');
@@ -1141,8 +1159,10 @@ function mostrarListaPuntos() {
       let necesidadesHtml = '';
       if (busquedaNecesidad.trim() !== '') {
         const necesidades = p.informacion?.necesidades || [];
+        const insumos = p.informacion?.necesita || [];
         const texto = busquedaNecesidad.toLowerCase().trim();
-        necesidadesHtml = necesidades.map(n => {
+        // Buscar en necesidades
+        let matchEncontrada = necesidades.map(n => {
           const idx = n.toLowerCase().indexOf(texto);
           if (idx !== -1) {
             const before = n.substring(0, idx);
@@ -1152,7 +1172,22 @@ function mostrarListaPuntos() {
           }
           return n;
         }).join(', ');
-        necesidadesHtml = `<div style="font-size:12px;color:#555;margin-top:4px;"><strong>Necesidad encontrada:</strong> ${necesidadesHtml}</div>`;
+        // Buscar en insumos
+        const insumosMatch = insumos.map(i => {
+          const idx = i.toLowerCase().indexOf(texto);
+          if (idx !== -1) {
+            const before = i.substring(0, idx);
+            const match = i.substring(idx, idx + texto.length);
+            const after = i.substring(idx + texto.length);
+            return before + '<span style="background:#ffeb3b;font-weight:bold;">' + match + '</span>' + after;
+          }
+          return i;
+        }).join(', ');
+        // Combinar resultados
+        const partes = [];
+        if (matchEncontrada) partes.push('Necesidades: ' + matchEncontrada);
+        if (insumosMatch) partes.push('Insumos: ' + insumosMatch);
+        necesidadesHtml = partes.length > 0 ? `<div style="font-size:12px;color:#555;margin-top:4px;"><strong>Coincidencias:</strong> ${partes.join(' | ')}</div>` : '';
       }
       
       html += `
@@ -1312,12 +1347,26 @@ function mostrarDetallePunto(id) {
     necesidades.forEach(n => html += `<li>${sanitizar(n)}</li>`);
     html += `</ul></div>`;
   }
+
+  // Mostrar insumos necesarios de forma destacada (solo para centros de acopio)
+  if (punto.tipo === 'centro_acopio' && punto.informacion?.necesita?.length) {
+    html += `<div style="margin-bottom:12px;background:#ffebee;padding:10px;border-radius:8px;border-left:4px solid #d32f2f;">
+      <strong style="color:#d32f2f;font-size:15px;">📦 INSUMOS NECESARIOS:</strong>
+      <ul style="margin:6px 0 0 18px;">`;
+    punto.informacion.necesita.forEach(insumo => {
+      html += `<li style="font-weight:bold;color:#E53935;">${sanitizar(insumo)}</li>`;
+    });
+    html += `</ul></div>`;
+  }
+
+  // Mostrar el resto de campos (excluyendo los que ya mostramos)
   for (const [key, val] of Object.entries(punto.informacion || {})) {
-    if (key === 'direccion' || key === 'necesidades' || key === 'urgente' || key === 'voluntarios_infantiles' || key === 'envios' || key === 'nombre_registrador' || key === 'rol_registrador' || key === 'fecha_creacion' || key === 'fecha_edicion' || key === 'estado') continue;
+    if (key === 'direccion' || key === 'necesidades' || key === 'urgente' || key === 'voluntarios_infantiles' || key === 'envios' || key === 'nombre_registrador' || key === 'rol_registrador' || key === 'fecha_creacion' || key === 'fecha_edicion' || key === 'estado' || key === 'necesita') continue;
     if (val && val.length > 0) {
       html += `<div style="margin-bottom:8px;"><strong>${sanitizar(key)}:</strong> ${typeof val === 'string' ? sanitizar(val) : JSON.stringify(sanitizarArray(val))}</div>`;
     }
   }
+
   if (punto.informacion?.voluntarios_infantiles && punto.informacion.voluntarios_infantiles.length > 0) {
     html += `<div style="margin-bottom:12px;"><strong>👥 Voluntarios registrados:</strong><ul style="margin:4px 0 0 18px;">`;
     punto.informacion.voluntarios_infantiles.forEach(v => {
@@ -1385,7 +1434,6 @@ function cerrarLista() {
     header.innerHTML = '📋 Todos los puntos';
   }
 }
-
 function obtenerDireccionDesdeCoordenadas(lat, lng) {
   const campoDireccion = document.getElementById('campo_direccion');
   if (!campoDireccion) return;
