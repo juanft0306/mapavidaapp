@@ -477,19 +477,24 @@
     <div>Cargando mapa...</div>
   </div>
 
-  <!-- PANEL SUPERIOR (CON BUSCADOR DE UBICACIÓN Y DE NECESIDADES) -->
+  <!-- PANEL SUPERIOR (CON BUSCADORES MEJORADOS) -->
   <div id="panelSuperior">
     <div style="display:flex; flex-wrap:wrap; align-items:center; gap:6px; width:100%;">
       <!-- Buscador de ubicación -->
-      <input type="text" id="buscador" placeholder="Buscar ubicación (ej: Los Rosales, Caracas)" style="flex:2; min-width:120px;" />
-      <button id="btnBuscar">🔍 Ubicación</button>
+      <div style="display:flex; align-items:center; gap:4px; flex:2; min-width:180px; background:#f0f4ff; border-radius:20px; padding:2px; border:2px solid #1a73e8; box-shadow:0 2px 6px rgba(26,115,232,0.2);">
+        <input type="text" id="buscador" placeholder="Buscar ubicación (ej: Los Rosales)" style="flex:1; border:none; background:transparent; padding:8px 12px; font-size:14px; outline:none; min-width:80px;" />
+        <button id="btnBuscar" style="background:#1a73e8; color:white; border:none; border-radius:20px; padding:6px 14px; font-weight:bold; cursor:pointer; font-size:13px; white-space:nowrap;">🔍 Ubicación</button>
+      </div>
       
       <!-- Buscador de necesidades -->
-      <input type="text" id="buscadorNecesidades" placeholder="Buscar por necesidad (ej: agua, comida)" style="flex:2; min-width:120px;" />
-      <button id="btnBuscarNecesidad">🔍 Necesidad</button>
+      <div style="display:flex; align-items:center; gap:4px; flex:2; min-width:180px; background:#fff8e1; border-radius:20px; padding:2px; border:2px solid #f57c00; box-shadow:0 2px 6px rgba(245,124,0,0.2);">
+        <input type="text" id="buscadorNecesidades" placeholder="Buscar por necesidad (ej: agua, comida)" style="flex:1; border:none; background:transparent; padding:8px 12px; font-size:14px; outline:none; min-width:80px;" />
+        <button id="btnBuscarNecesidad" style="background:#f57c00; color:white; border:none; border-radius:20px; padding:6px 14px; font-weight:bold; cursor:pointer; font-size:13px; white-space:nowrap;">🏷️ Necesidad</button>
+      </div>
       
-      <button id="btnVerLista">📋 Lista</button>
-      <button id="btnUrgencias">🚨 Urgencias</button>
+      <!-- Botones de acción -->
+      <button id="btnVerLista" style="background:#E53935; color:white; border:none; padding:6px 14px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; white-space:nowrap;">📋 Lista</button>
+      <button id="btnUrgencias" style="background:#d32f2f; color:white; border:none; padding:6px 14px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; white-space:nowrap;">🚨 Urgencias</button>
       <button id="btnToggleFiltros" style="background:#1a237e; color:white; border:none; padding:6px 14px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; white-space:nowrap;">🔽 Filtros</button>
     </div>
     <!-- CONTENEDOR DE FILTROS (OCULTABLE) -->
