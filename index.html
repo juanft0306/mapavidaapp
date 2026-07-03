@@ -1,956 +1,673 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>MapaVida - Asistencia Humanitaria</title>
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
-    <style>
-        /* ===== RESET Y BASE ===== */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #f0f2f5;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            padding: 16px;
-        }
-        /* ===== CONTENEDOR PRINCIPAL ===== */
-        .app-container {
-            max-width: 1200px;
-            width: 100%;
-            background: white;
-            border-radius: 32px;
-            box-shadow: 0 8px 40px rgba(0,0,0,0.08);
-            overflow: hidden;
-            padding: 20px 24px 24px;
-        }
-        /* ===== BARRA DE BÚSQUEDA (ACTUAL) ===== */
-        .search-bar {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 12px 18px;
-            background: #f8f9fa;
-            padding: 6px 12px 6px 18px;
-            border-radius: 60px;
-            border: 1px solid #e8eaed;
-            margin-bottom: 20px;
-            transition: all 0.2s;
-        }
-        .search-bar:focus-within {
-            border-color: #1a73e8;
-            box-shadow: 0 0 0 3px rgba(26,115,232,0.15);
-        }
-        .search-bar .search-icon {
-            color: #9aa0a6;
-            font-size: 1.1rem;
-        }
-        .search-bar input {
-            flex: 1;
-            border: none;
-            background: transparent;
-            padding: 12px 0;
-            font-size: 0.95rem;
-            outline: none;
-            color: #202124;
-            min-width: 150px;
-        }
-        .search-bar input::placeholder {
-            color: #9aa0a6;
-        }
-        .search-bar .btn-group {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-        }
-        .search-bar .btn-group .btn {
-            border: none;
-            background: transparent;
-            padding: 8px 16px;
-            border-radius: 30px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: #5f6368;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .search-bar .btn-group .btn:hover {
-            background: #e8eaed;
-        }
-        .search-bar .btn-group .btn.active {
-            background: #e8f0fe;
-            color: #1a73e8;
-        }
-        .search-bar .btn-primary {
-            background: #1a73e8;
-            color: white;
-            padding: 10px 24px;
-            border-radius: 40px;
-            font-weight: 500;
-            border: none;
-            cursor: pointer;
-            transition: background 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.9rem;
-            white-space: nowrap;
-        }
-        .search-bar .btn-primary:hover {
-            background: #1557b0;
-        }
-        /* ===== MAPA ===== */
-        #map {
-            height: 65vh;
-            min-height: 400px;
-            border-radius: 20px;
-            border: 1px solid #e8eaed;
-            margin-bottom: 16px;
-        }
-        /* ===== LEYENDA / ESTADÍSTICAS ===== */
-        .stats-bar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px 30px;
-            padding: 12px 0 4px;
-            font-size: 0.9rem;
-            color: #5f6368;
-        }
-        .stats-bar span i {
-            margin-right: 6px;
-            color: #1a73e8;
-        }
-        .stats-bar .badge {
-            background: #e8eaed;
-            padding: 2px 10px;
-            border-radius: 20px;
-            font-weight: 500;
-            color: #202124;
-        }
-        /* ===== RESPONSIVE ===== */
-        @media (max-width: 700px) {
-            .app-container { padding: 16px; }
-            .search-bar { padding: 8px 12px; border-radius: 30px; }
-            .search-bar input { font-size: 0.9rem; padding: 10px 0; }
-            .search-bar .btn-group .btn { padding: 6px 12px; font-size: 0.8rem; }
-            .search-bar .btn-primary { padding: 8px 16px; font-size: 0.8rem; }
-            #map { height: 50vh; min-height: 300px; }
-        }
-        @media (max-width: 500px) {
-            .search-bar { flex-direction: column; align-items: stretch; gap: 8px; }
-            .search-bar .btn-group { justify-content: center; }
-            .search-bar .btn-primary { justify-content: center; }
-        }
-        /* ===== ESTILOS PARA MODALES Y POPUPS (se mantienen) ===== */
-        .leaflet-popup-content-wrapper {
-            border-radius: 16px !important;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important;
-        }
-        .leaflet-popup-content {
-            font-family: 'Inter', sans-serif;
-            font-size: 0.9rem;
-            min-width: 220px;
-        }
-        .popup-title {
-            font-weight: 600;
-            font-size: 1.05rem;
-            margin-bottom: 4px;
-            color: #202124;
-        }
-        .popup-detail {
-            color: #5f6368;
-            margin: 2px 0;
-        }
-        .popup-detail i {
-            width: 18px;
-            color: #1a73e8;
-        }
-        .popup-actions {
-            margin-top: 10px;
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        .popup-actions button {
-            border: none;
-            padding: 6px 14px;
-            border-radius: 30px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .btn-edit {
-            background: #e8f0fe;
-            color: #1a73e8;
-        }
-        .btn-edit:hover { background: #d2e3fc; }
-        .btn-delete {
-            background: #fce8e6;
-            color: #d93025;
-        }
-        .btn-delete:hover { background: #fad2cf; }
-        .btn-done {
-            background: #e6f4ea;
-            color: #137333;
-        }
-        .btn-done:hover { background: #ceead6; }
-        /* Modal genérico */
-        .modal-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.4);
-            backdrop-filter: blur(4px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-        }
-        .modal-overlay.active { display: flex; }
-        .modal-box {
-            background: white;
-            border-radius: 28px;
-            padding: 28px 32px;
-            max-width: 500px;
-            width: 90%;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-            animation: modalIn 0.25s ease;
-        }
-        @keyframes modalIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-        .modal-box h2 {
-            font-size: 1.5rem;
-            margin-bottom: 16px;
-            color: #202124;
-        }
-        .modal-box label {
-            display: block;
-            font-weight: 500;
-            margin: 12px 0 4px;
-            color: #3c4043;
-        }
-        .modal-box input, .modal-box select, .modal-box textarea {
-            width: 100%;
-            padding: 10px 14px;
-            border: 1px solid #dadce0;
-            border-radius: 12px;
-            font-size: 0.95rem;
-            font-family: inherit;
-            transition: border 0.2s;
-        }
-        .modal-box input:focus, .modal-box select:focus, .modal-box textarea:focus {
-            border-color: #1a73e8;
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(26,115,232,0.15);
-        }
-        .modal-box textarea { resize: vertical; min-height: 60px; }
-        .modal-actions {
-            display: flex;
-            gap: 12px;
-            margin-top: 20px;
-            justify-content: flex-end;
-        }
-        .modal-actions button {
-            padding: 10px 24px;
-            border-radius: 40px;
-            border: none;
-            font-weight: 500;
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
-        .modal-actions .btn-cancel {
-            background: #f1f3f5;
-            color: #5f6368;
-        }
-        .modal-actions .btn-cancel:hover { background: #e8eaed; }
-        .modal-actions .btn-confirm {
-            background: #1a73e8;
-            color: white;
-        }
-        .modal-actions .btn-confirm:hover { background: #1557b0; }
-        /* Toasts */
-        .toast-container {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            z-index: 10000;
-        }
-        .toast {
-            background: #323232;
-            color: white;
-            padding: 14px 24px;
-            border-radius: 40px;
-            font-size: 0.9rem;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-            animation: slideUp 0.3s ease;
-            max-width: 360px;
-        }
-        .toast.success { background: #137333; }
-        .toast.error { background: #d93025; }
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        /* ===== ADMIN PANEL ===== */
-        .admin-panel {
-            margin-top: 16px;
-            padding: 16px 20px;
-            background: #f8f9fa;
-            border-radius: 20px;
-            border: 1px solid #e8eaed;
-            display: none;
-        }
-        .admin-panel.active { display: block; }
-        .admin-panel .admin-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 12px;
-        }
-        .admin-panel .admin-header h3 {
-            font-weight: 600;
-            color: #202124;
-        }
-        .admin-panel .admin-header button {
-            background: #1a73e8;
-            color: white;
-            border: none;
-            padding: 6px 18px;
-            border-radius: 30px;
-            cursor: pointer;
-            font-weight: 500;
-        }
-        .admin-panel .admin-header button:hover { background: #1557b0; }
-        .admin-list {
-            max-height: 200px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-        .admin-list .item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 12px;
-            background: white;
-            border-radius: 12px;
-            border: 1px solid #e8eaed;
-        }
-        .admin-list .item .info { font-size: 0.9rem; }
-        .admin-list .item .info strong { color: #202124; }
-        .admin-list .item .actions button {
-            border: none;
-            background: transparent;
-            padding: 4px 10px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 0.8rem;
-        }
-        .admin-list .item .actions .edit { color: #1a73e8; }
-        .admin-list .item .actions .delete { color: #d93025; }
-        .admin-list .item .actions .edit:hover { background: #e8f0fe; }
-        .admin-list .item .actions .delete:hover { background: #fce8e6; }
-        /* Switch de administrador */
-        .admin-toggle {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 12px;
-            font-size: 0.9rem;
-            color: #5f6368;
-        }
-        .admin-toggle input[type="password"] {
-            padding: 6px 12px;
-            border: 1px solid #dadce0;
-            border-radius: 30px;
-            font-size: 0.85rem;
-            width: 150px;
-        }
-        .admin-toggle button {
-            background: #1a73e8;
-            color: white;
-            border: none;
-            padding: 6px 18px;
-            border-radius: 30px;
-            cursor: pointer;
-            font-weight: 500;
-        }
-        .admin-toggle button:hover { background: #1557b0; }
-        .admin-toggle .status {
-            font-weight: 500;
-        }
-        .admin-toggle .status.on { color: #137333; }
-        .admin-toggle .status.off { color: #d93025; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MapaVida - Asistencia Venezuela</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <!-- Leaflet Routing Machine CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+  
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet Routing Machine JS -->
+  <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+  
+  <!-- DOMPurify (para sanitizar HTML) -->
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.0/dist/purify.min.js"></script>
+  
+  <style>
+    /* ===== RESET Y BASE ===== */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; overflow: hidden; }
+    #map { height: 100vh; width: 100%; }
+
+    /* ===== PANEL SUPERIOR (RESPONSIVE) ===== */
+    #panelSuperior {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      z-index: 5000;
+      background: rgba(255,255,255,0.95);
+      border-radius: 12px;
+      padding: 10px 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+      backdrop-filter: blur(4px);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    #panelSuperior > div:first-child {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+    }
+    #panelSuperior input {
+      flex: 1 1 140px;
+      min-width: 100px;
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 20px;
+      font-size: 14px;
+      outline: none;
+      height: 38px;
+    }
+    #panelSuperior input:focus { border-color: #E53935; }
+    #panelSuperior button {
+      background: #E53935;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 12px;
+      white-space: nowrap;
+      height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #panelSuperior button:active { transform: scale(0.95); }
+    #btnToggleFiltros {
+      background: #1a237e !important;
+      font-size: 12px !important;
+      padding: 6px 10px !important;
+      min-width: 70px;
+    }
+    #filtrosContainer {
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+      max-height: 80px;
+      width: 100%;
+    }
+    #filtros {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 6px;
+      padding-bottom: 4px;
+    }
+    #filtros .filtro-btn {
+      background: #eee;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+    #filtros .filtro-btn.activo {
+      background: #E53935;
+      color: white;
+    }
+    #filtros .filtro-btn .color-bola {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    /* ===== MENÚ FLOTANTE (RESPONSIVE) ===== */
+    #menuContainer {
+      position: fixed;
+      bottom: 20px;
+      right: 16px;
+      z-index: 5000;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+    #menuOpciones {
+      display: none;
+      flex-direction: column;
+      background: white;
+      border-radius: 12px;
+      padding: 6px 0;
+      margin-bottom: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      min-width: 170px;
+      overflow: hidden;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+    #menuOpciones button {
+      background: white;
+      border: none;
+      padding: 10px 16px;
+      text-align: left;
+      font-size: 14px;
+      border-bottom: 1px solid #f0f0f0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: 0.1s;
+    }
+    #menuOpciones button:last-child { border-bottom: none; }
+    #menuOpciones button:active { background: #f0f0f0; }
+    #btnAgregar {
+      background: #E53935;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 12px 20px;
+      font-size: 16px;
+      font-weight: bold;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      cursor: pointer;
+      min-width: 130px;
+      text-align: center;
+    }
+    #btnAgregar:active { transform: scale(0.95); }
+    #btnAdmin, #btnPendientes, #btnAuth {
+      background: #1a237e;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: bold;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      cursor: pointer;
+      margin-bottom: 6px;
+      text-align: center;
+      width: 100%;
+      display: none;
+    }
+    #btnAuth { display: block; background: #1a237e; }
+    #btnAdmin:active, #btnPendientes:active, #btnAuth:active { transform: scale(0.95); }
+    #btnPendientes { background: #f57f17; }
+
+    /* ===== FORMULARIO PRINCIPAL (RESPONSIVE) ===== */
+    #formulario, #formularioConductor, #panelAprobacionOrigen, #panelAprobacionDestino, #panelLogin {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 20px 24px;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
+      z-index: 6000;
+      width: 92%;
+      max-width: 450px;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+    #formulario h3, #formularioConductor h3, #panelAprobacionOrigen h3, #panelAprobacionDestino h3, #panelLogin h2 {
+      color: #E53935;
+      margin-bottom: 12px;
+      font-size: 18px;
+    }
+    #formulario label, #formularioConductor label, #panelAprobacionOrigen label, #panelAprobacionDestino label, #panelLogin label {
+      display: block;
+      margin: 10px 0 4px 0;
+      font-weight: 600;
+      font-size: 14px;
+      color: #333;
+    }
+    #formulario input, #formulario textarea, #formulario select,
+    #formularioConductor input, #formularioConductor select,
+    #panelAprobacionOrigen input, #panelAprobacionOrigen select,
+    #panelAprobacionDestino input, #panelAprobacionDestino select,
+    #panelLogin input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+    #formulario textarea { resize: vertical; min-height: 60px; }
+    #formulario .coordenadas {
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 8px;
+      margin: 10px 0;
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+    }
+    #formulario .coordenadas span { font-weight: bold; color: #E53935; }
+    #formulario button, #formularioConductor button, #panelAprobacionOrigen button, #panelAprobacionDestino button, #panelLogin button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #btnGuardar { background: #4CAF50; color: white; }
+    #btnCancelar { background: #666; color: white; margin-top: 6px; }
+    #btnEliminar {
+      background: #d32f2f;
+      color: white;
+      margin-top: 6px;
+      display: none;
+    }
+    #btnLogin { background: #1a237e; color: white; }
+    #btnCerrarLogin { background: #666; color: white; margin-top: 6px; }
+
+    /* ===== POPUPS DEL MAPA (RESPONSIVE) ===== */
+    .popup-tipo { font-weight: bold; color: #E53935; }
+    .popup-info { font-size: 13px; margin: 3px 0; }
+    .popup-distancia { font-size: 12px; color: #555; margin-top: 4px; }
+    .popup-seccion { margin-top: 8px; border-top: 1px solid #e0e0e0; padding-top: 6px; }
+    .popup-lista { margin: 4px 0 0 0; padding-left: 18px; font-size: 13px; }
+    .popup-lista li { margin-bottom: 2px; }
+    .popup-mensaje-bonito { background: #fff3e0; padding: 10px; border-radius: 8px; margin: 6px 0; border-left: 4px solid #E53935; }
+    .popup-mensaje-bonito p { margin: 0; font-size: 13px; color: #4e342e; }
+    .popup-advertencia { color: #d32f2f; font-weight: bold; }
+    .popup-definicion { font-size: 12px; color: #555; font-style: italic; margin: 2px 0 6px 0; background: #f9f9f9; padding: 4px 8px; border-radius: 4px; }
+    .popup-registrador { font-size: 12px; color: #555; background: #f0f0f0; padding: 4px 8px; border-radius: 4px; margin-top: 4px; }
+    .leaflet-popup-content-wrapper {
+      max-width: 90vw !important;
+    }
+    .leaflet-popup-content {
+      max-width: 85vw !important;
+      min-width: 200px;
+    }
+
+    /* ===== PANEL DE LISTA, DETALLE, URGENCIAS (RESPONSIVE) ===== */
+    #panelLista, #panelDetalle, #panelUrgencias {
+      display: none;
+      position: fixed;
+      top: 80px;
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      z-index: 9000;
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      overflow-y: auto;
+      flex-direction: column;
+    }
+    #panelDetalle {
+      right: 10px;
+      width: auto;
+      left: 10px;
+      bottom: 10px;
+      top: 80px;
+    }
+    @media (min-width: 768px) {
+      #panelDetalle {
+        width: 380px;
+        right: 10px;
+        left: auto;
+      }
+    }
+    .header-lista, .header-detalle, .header-urgencias {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .header-lista h2, .header-urgencias h2, .header-detalle h3 {
+      margin: 0;
+      font-size: 18px;
+    }
+    .header-lista button, .header-urgencias button, .header-detalle button {
+      background: #d32f2f;
+      color: white;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 13px;
+    }
+    #filtrosLista {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-bottom: 12px;
+    }
+    #filtrosLista button {
+      background: #eee;
+      border: none;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    #filtrosLista button.activo {
+      background: #E53935;
+      color: white;
+    }
+    #contenedorContadores {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    #contenedorContadores span {
+      background: #f0f0f0;
+      padding: 4px 10px;
+      border-radius: 16px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .item-lista {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid #eee;
+      cursor: pointer;
+      margin-bottom: 4px;
+      border-radius: 4px;
+    }
+    .item-lista:hover { background: #f5f5f5; }
+
+    /* ===== NAVEGACIÓN ===== */
+    .leaflet-routing-container {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      padding: 6px;
+      max-height: 150px;
+      overflow-y: auto;
+      font-size: 12px;
+      z-index: 7000 !important;
+    }
+    .leaflet-routing-container .leaflet-routing-alt {
+      padding: 4px 8px;
+    }
+    #btnCancelarNavegacion {
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #d32f2f;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 30px;
+      font-weight: bold;
+      z-index: 8000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      cursor: pointer;
+      display: none;
+      font-size: 14px;
+    }
+    #btnCancelarNavegacion:active { transform: scale(0.95); }
+
+    /* ===== LOADER ===== */
+    #cargando {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      color: white;
+      font-size: 20px;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .spinner {
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #E53935;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* ===== RESPONSIVE EXTRA ===== */
+    @media (max-width: 480px) {
+      #panelSuperior { padding: 8px 10px; }
+      #panelSuperior input { font-size: 13px; padding: 6px 10px; height: 34px; min-width: 80px; }
+      #panelSuperior button { font-size: 11px; padding: 4px 10px; height: 34px; }
+      #btnToggleFiltros { font-size: 11px !important; padding: 4px 8px !important; min-width: 60px; }
+      #filtros .filtro-btn { font-size: 10px; padding: 3px 8px; }
+      #menuOpciones { min-width: 150px; }
+      #menuOpciones button { font-size: 13px; padding: 8px 14px; }
+      #btnAgregar { font-size: 14px; padding: 10px 16px; min-width: 110px; }
+      #btnAdmin, #btnPendientes, #btnAuth { font-size: 12px; padding: 6px 14px; }
+      #formulario, #formularioConductor, #panelAprobacionOrigen, #panelAprobacionDestino, #panelLogin {
+        padding: 16px 18px;
+        width: 95%;
+        max-width: 100%;
+      }
+      #formulario h3, #formularioConductor h3, #panelAprobacionOrigen h3, #panelAprobacionDestino h3, #panelLogin h2 {
+        font-size: 16px;
+      }
+      .leaflet-popup-content { max-width: 80vw !important; min-width: 160px; }
+      #panelLista, #panelDetalle, #panelUrgencias {
+        padding: 12px;
+        top: 70px;
+      }
+      .header-lista h2, .header-urgencias h2, .header-detalle h3 { font-size: 16px; }
+      .item-lista { padding: 8px 10px; font-size: 13px; }
+      #filtrosLista button { font-size: 10px; padding: 3px 8px; }
+      #contenedorContadores span { font-size: 11px; padding: 3px 8px; }
+    }
+    @media (max-width: 380px) {
+      #panelSuperior input { min-width: 60px; font-size: 12px; }
+      #panelSuperior button { font-size: 10px; padding: 3px 8px; }
+      #btnToggleFiltros { font-size: 10px !important; padding: 3px 6px !important; min-width: 50px; }
+      #filtros .filtro-btn { font-size: 9px; padding: 2px 6px; }
+      #menuOpciones { min-width: 130px; }
+      #btnAgregar { font-size: 12px; padding: 8px 12px; min-width: 90px; }
+    }
+  </style>
 </head>
 <body>
-    <div class="app-container">
-        <!-- ===== BARRA DE BÚSQUEDA ===== -->
-        <div class="search-bar">
-            <i class="fas fa-search search-icon"></i>
-            <input type="text" id="searchInput" placeholder="Buscar por necesidad o ubicación..." />
-            <div class="btn-group">
-                <button class="btn" id="listBtn"><i class="fas fa-list-ul"></i> Lista</button>
-                <button class="btn" id="filterBtn"><i class="fas fa-sliders-h"></i> Filtro3s</button>
-                <button class="btn" id="urgencyBtn"><i class="fas fa-exclamation-triangle"></i> Urgencias</button>
-            </div>
-            <button class="btn-primary" id="googleSearchBtn"><i class="fab fa-google"></i> Google</button>
-        </div>
+  <div id="cargando">
+    <div class="spinner"></div>
+    <div>Cargando mapa...</div>
+  </div>
 
-        <!-- ===== MAPA ===== -->
-        <div id="map"></div>
-
-        <!-- ===== ESTADÍSTICAS ===== -->
-        <div class="stats-bar" id="statsBar">
-            <span><i class="fas fa-map-marker-alt"></i> Puntos: <strong id="totalPoints">0</strong></span>
-            <span><i class="fas fa-check-circle" style="color:#137333;"></i> Atendidos: <strong id="donePoints">0</strong></span>
-            <span><i class="fas fa-clock" style="color:#f9ab00;"></i> Pendientes: <strong id="pendingPoints">0</strong></span>
-            <span><i class="fas fa-exclamation-triangle" style="color:#d93025;"></i> Urgencias: <strong id="urgentPoints">0</strong></span>
-            <span class="badge"><i class="fas fa-edit"></i> Admin: <span id="adminStatus">OFF</span></span>
-        </div>
-
-        <!-- ===== ADMIN TOGGLE ===== -->
-        <div class="admin-toggle">
-            <span>🔑 Modo Admin:</span>
-            <input type="password" id="adminPassword" placeholder="Contraseña" />
-            <button id="adminLoginBtn">Entrar</button>
-            <span class="status off" id="adminStatusLabel">Desactivado</span>
-        </div>
-
-        <!-- ===== PANEL DE ADMIN (oculto) ===== -->
-        <div class="admin-panel" id="adminPanel">
-            <div class="admin-header">
-                <h3><i class="fas fa-tools"></i> Gestión de Puntos</h3>
-                <button id="addPointBtn"><i class="fas fa-plus"></i> Nuevo punto</button>
-            </div>
-            <div class="admin-list" id="adminList">
-                <!-- Se llena dinámicamente -->
-                <p style="color:#9aa0a6;">Sin puntos para mostrar.</p>
-            </div>
-        </div>
+  <!-- PANEL SUPERIOR (CON BUSCADOR DE UBICACIÓN Y DE NECESIDADES) -->
+  <div id="panelSuperior">
+    <div style="display:flex; flex-wrap:wrap; align-items:center; gap:6px; width:100%;">
+      <!-- Buscador de ubicación -->
+      <input type="text" id="buscador" placeholder="Buscar ubicación (ej: Los Rosales, Caracas)" style="flex:2; min-width:120px;" />
+      <button id="btnBuscar">🔍 Ubicación</button>
+      
+      <!-- Buscador de necesidades -->
+      <input type="text" id="buscadorNecesidades" placeholder="Buscar por necesidad (ej: agua, comida)" style="flex:2; min-width:120px;" />
+      <button id="btnBuscarNecesidad">🔍 Necesidad</button>
+      
+      <button id="btnVerLista">📋 Lista</button>
+      <button id="btnUrgencias">🚨 Urgencias</button>
+      <button id="btnToggleFiltros" style="background:#1a237e; color:white; border:none; padding:6px 14px; border-radius:20px; font-weight:bold; cursor:pointer; font-size:13px; white-space:nowrap;">🔽 Filtros</button>
     </div>
-
-    <!-- ===== MODAL PARA AGREGAR/EDITAR ===== -->
-    <div class="modal-overlay" id="modalOverlay">
-        <div class="modal-box">
-            <h2 id="modalTitle">Nuevo Punto</h2>
-            <form id="pointForm">
-                <label for="pointName">Nombre *</label>
-                <input type="text" id="pointName" required />
-
-                <label for="pointType">Tipo *</label>
-                <select id="pointType" required>
-                    <option value="Refugio">Refugio</option>
-                    <option value="Centro de Acopio">Centro de Acopio</option>
-                    <option value="Hospital">Hospital</option>
-                    <option value="Comedor">Comedor</option>
-                    <option value="Edificio Caído">Edificio Caído</option>
-                    <option value="Otro">Otro</option>
-                </select>
-
-                <label for="pointAddress">Dirección *</label>
-                <input type="text" id="pointAddress" required />
-
-                <label for="pointPhone">Teléfono</label>
-                <input type="text" id="pointPhone" />
-
-                <label for="pointStatus">Estado</label>
-                <select id="pointStatus">
-                    <option value="Pendiente">Pendiente</option>
-                    <option value="Atendido">Atendido</option>
-                    <option value="Urgente">Urgente</option>
-                </select>
-
-                <label for="pointNotes">Notas</label>
-                <textarea id="pointNotes" rows="2"></textarea>
-
-                <div style="margin-top:12px; font-size:0.85rem; color:#5f6368;">
-                    <i class="fas fa-map-pin"></i> Haz clic en el mapa para seleccionar ubicación
-                    <span id="coordDisplay" style="display:block; margin-top:4px; font-weight:500;">Ninguna seleccionada</span>
-                </div>
-
-                <div class="modal-actions">
-                    <button type="button" class="btn-cancel" id="modalCancel">Cancelar</button>
-                    <button type="submit" class="btn-confirm" id="modalConfirm">Guardar</button>
-                </div>
-            </form>
-        </div>
+    <!-- CONTENEDOR DE FILTROS (OCULTABLE) -->
+    <div id="filtrosContainer" style="overflow:hidden; transition: max-height 0.3s ease; max-height: 80px;">
+      <div id="filtros" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; width:100%;">
+        <button class="filtro-btn activo" data-tipo="todos">✅ Todos</button>
+        <button class="filtro-btn" data-tipo="refugio"><span class="color-bola" style="background:#2E7D32;"></span> Refugio</button>
+        <button class="filtro-btn" data-tipo="centro_acopio"><span class="color-bola" style="background:#F57C00;"></span> Centro de acopio</button>
+        <button class="filtro-btn" data-tipo="hospital"><span class="color-bola" style="background:#1976D2;"></span> Hospital</button>
+        <button class="filtro-btn" data-tipo="edificio_caido"><span class="color-bola" style="background:#C62828;"></span> Edificio caído</button>
+        <button class="filtro-btn" data-tipo="edificio_recogido"><span class="color-bola" style="background:#757575;"></span> Recogidos</button>
+        <button class="filtro-btn" data-tipo="peligro_derrumbe"><span class="color-bola" style="background:#E65100;"></span> Peligro de derrumbe</button>
+        <button class="filtro-btn" data-tipo="sin_inspeccionar"><span class="color-bola" style="background:#6A1B9A;"></span> Sin inspeccionar</button>
+        <button class="filtro-btn" data-tipo="veterinaria"><span class="color-bola" style="background:#00897B;"></span> Atención veterinaria</button>
+        <button class="filtro-btn" data-tipo="ayuda_psicologica"><span class="color-bola" style="background:#8E24AA;"></span> Ayuda psicológica</button>
+        <button class="filtro-btn" data-tipo="vacuna_tetanos"><span class="color-bola" style="background:#0D47A1;"></span> Vacuna antitetánica</button>
+      </div>
     </div>
+  </div>
 
-    <!-- ===== TOAST CONTAINER ===== -->
-    <div class="toast-container" id="toastContainer"></div>
+  <!-- MAPA -->
+  <div id="map"></div>
 
-    <!-- ===== SCRIPTS ===== -->
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- DOMPurify para sanitizar -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
-        <script>
-        // ============================================================
-        //  MAPAVIDA APP - LÓGICA COMPLETA
-        // ============================================================
+  <!-- MENÚ FLOTANTE (SIN CHAT, SIN SEGURIDAD) -->
+  <div id="menuContainer">
+    <div id="menuOpciones">
+      <button data-tipo="refugio"><span class="color-bola" style="background:#2E7D32;width:14px;height:14px;"></span> 🏠 Refugio</button>
+      <button data-tipo="centro_acopio"><span class="color-bola" style="background:#F57C00;width:14px;height:14px;"></span> 📦 Centro de acopio</button>
+      <button data-tipo="hospital"><span class="color-bola" style="background:#1976D2;width:14px;height:14px;"></span> 🏥 Hospital</button>
+      <button data-tipo="edificio_caido"><span class="color-bola" style="background:#C62828;width:14px;height:14px;"></span> 💥 Edificio caído</button>
+      <button data-tipo="peligro_derrumbe"><span class="color-bola" style="background:#E65100;width:14px;height:14px;"></span> ⚠️ Peligro de derrumbe</button>
+      <button data-tipo="sin_inspeccionar"><span class="color-bola" style="background:#6A1B9A;width:14px;height:14px;"></span> ❓ Sin inspeccionar</button>
+      <button data-tipo="veterinaria"><span class="color-bola" style="background:#00897B;width:14px;height:14px;"></span> 🐾 Atención veterinaria</button>
+      <button data-tipo="ayuda_psicologica"><span class="color-bola" style="background:#8E24AA;width:14px;height:14px;"></span> 🧠 Ayuda psicológica</button>
+      <button data-tipo="vacuna_tetanos"><span class="color-bola" style="background:#0D47A1;width:14px;height:14px;"></span> 💉 Vacuna antitetánica</button>
+    </div>
+    <button id="btnAuth" style="display:block;">🔐 Iniciar sesión</button>
+    <button id="btnAdmin" style="display:none;">🔐 Administrar (desbloquear)</button>
+    <button id="btnPendientes" style="display:none;">⏳ Pendientes</button>
+    <button id="btnAgregar">➕ Agregar</button>
+  </div>
 
-        // --- CONFIGURACIÓN ---
-        const ADMIN_PASSWORD = 'MapaVida2026';
-        let isAdmin = false;
-        let map;
-        let markersLayer;
-        let pointsData = [];
-        let selectedLatLng = null;
-        let editingId = null;
-        let currentFilter = 'all'; // 'all', 'urgent', 'pending', 'done'
+  <!-- PANEL DE LOGIN -->
+  <div id="panelLogin">
+    <h2>🔐 Iniciar sesión</h2>
+    <p style="font-size:14px;color:#555;text-align:center;margin-bottom:12px;">Ingresa tus credenciales de administrador</p>
+    <label>Correo electrónico *</label>
+    <input type="email" id="loginEmail" placeholder="admin@example.com" required />
+    <label>Contraseña *</label>
+    <input type="password" id="loginPassword" placeholder="Ingresa tu contraseña" required />
+    <button id="btnLogin">✅ Iniciar sesión</button>
+    <button id="btnCerrarLogin">❌ Cancelar</button>
+  </div>
 
-        // --- ELEMENTOS DOM ---
-        const searchInput = document.getElementById('searchInput');
-        const listBtn = document.getElementById('listBtn');
-        const filterBtn = document.getElementById('filterBtn');
-        const urgencyBtn = document.getElementById('urgencyBtn');
-        const googleBtn = document.getElementById('googleSearchBtn');
-        const adminLoginBtn = document.getElementById('adminLoginBtn');
-        const adminPasswordInput = document.getElementById('adminPassword');
-        const adminPanel = document.getElementById('adminPanel');
-        const adminList = document.getElementById('adminList');
-        const addPointBtn = document.getElementById('addPointBtn');
-        const modalOverlay = document.getElementById('modalOverlay');
-        const modalTitle = document.getElementById('modalTitle');
-        const pointForm = document.getElementById('pointForm');
-        const pointName = document.getElementById('pointName');
-        const pointType = document.getElementById('pointType');
-        const pointAddress = document.getElementById('pointAddress');
-        const pointPhone = document.getElementById('pointPhone');
-        const pointStatus = document.getElementById('pointStatus');
-        const pointNotes = document.getElementById('pointNotes');
-        const coordDisplay = document.getElementById('coordDisplay');
-        const modalCancel = document.getElementById('modalCancel');
-        const modalConfirm = document.getElementById('modalConfirm');
-        const totalPointsSpan = document.getElementById('totalPoints');
-        const donePointsSpan = document.getElementById('donePoints');
-        const pendingPointsSpan = document.getElementById('pendingPoints');
-        const urgentPointsSpan = document.getElementById('urgentPoints');
-        const adminStatusLabel = document.getElementById('adminStatusLabel');
-        const adminStatusSpan = document.getElementById('adminStatus');
+  <!-- FORMULARIO PRINCIPAL -->
+  <div id="formulario">
+    <h3 id="formTitulo">📝 Nuevo punto</h3>
+    <div id="camposDinamicos"></div>
+    <div class="coordenadas">
+      <span>📍 Lat:</span> <span id="fLatDisplay">---</span>
+      <span>📍 Lng:</span> <span id="fLngDisplay">---</span>
+    </div>
+    <button id="btnGuardar">✅ Guardar</button>
+    <button id="btnEliminar" style="display:none;">🗑️ Eliminar punto</button>
+    <button id="btnCancelar">❌ Cancelar</button>
+  </div>
 
-        // --- INICIALIZAR MAPA ---
-        function initMap() {
-            map = L.map('map', {
-                center: [10.4806, -66.9036], // Caracas
-                zoom: 12,
-                zoomControl: true,
-                fadeAnimation: true,
-            });
+  <!-- FORMULARIO CONDUCTOR -->
+  <div id="formularioConductor">
+    <h3>🚚 Registro de conductor</h3>
+    <p style="font-size:14px;color:#555;margin-bottom:12px;">Para aceptar este envío, completa tus datos.</p>
+    <label>Nombre completo *</label>
+    <input type="text" id="c_nombre" required />
+    <label>Número de cédula *</label>
+    <input type="text" id="c_cedula" required />
+    <label>Teléfono de contacto *</label>
+    <input type="text" id="c_telefono" required />
+    <label>Tipo de vehículo *</label>
+    <select id="c_vehiculo">
+      <option value="Camión">Camión</option>
+      <option value="Pickup">Pickup</option>
+      <option value="Furgoneta">Furgoneta</option>
+      <option value="Motocicleta">Motocicleta</option>
+      <option value="Bicicleta">Bicicleta</option>
+    </select>
+    <button id="btnAceptarEnvio" style="margin-top:12px;background:#F57C00;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">✅ Aceptar envío</button>
+    <button id="btnCancelarConductor" style="margin-top:6px;background:#666;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">❌ Cancelar</button>
+  </div>
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors'
-            }).addTo(map);
+  <!-- PANEL APROBACIÓN ORIGEN -->
+  <div id="panelAprobacionOrigen">
+    <h3>📦 Confirmar salida de insumos</h3>
+    <p style="font-size:14px;color:#555;margin-bottom:12px;">El centro de acopio debe confirmar que los insumos salieron.</p>
+    <label>Tu nombre completo *</label>
+    <input type="text" id="a_nombre_origen" required />
+    <label>Tu rol en el centro *</label>
+    <select id="a_rol_origen">
+      <option value="Coordinador">Coordinador</option>
+      <option value="Encargado">Encargado</option>
+      <option value="Voluntario">Voluntario</option>
+    </select>
+    <label>Código de verificación del envío *</label>
+    <input type="text" id="a_codigo_origen" placeholder="Ej: ABC123" required />
+    <button id="btnAprobarOrigen" style="margin-top:12px;background:#F57C00;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">✅ Confirmar salida</button>
+    <button id="btnCancelarAprobacionOrigen" style="margin-top:6px;background:#666;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">❌ Cancelar</button>
+  </div>
 
-            markersLayer = L.layerGroup().addTo(map);
+  <!-- PANEL APROBACIÓN DESTINO -->
+  <div id="panelAprobacionDestino">
+    <h3>✅ Confirmar recepción de insumos</h3>
+    <p style="font-size:14px;color:#555;margin-bottom:12px;">El destino debe confirmar que los insumos llegaron correctamente.</p>
+    <label>Tu nombre completo *</label>
+    <input type="text" id="a_nombre_destino" required />
+    <label>Tu rol en el destino *</label>
+    <select id="a_rol_destino">
+      <option value="Coordinador">Coordinador</option>
+      <option value="Encargado">Encargado</option>
+      <option value="Voluntario">Voluntario</option>
+    </select>
+    <label>Código de verificación del envío *</label>
+    <input type="text" id="a_codigo_destino" placeholder="Ej: ABC123" required />
+    <label>¿Todo en buen estado?</label>
+    <select id="a_estado_destino">
+      <option value="correcto">✅ Sí, todo correcto</option>
+      <option value="faltante">⚠️ Faltan algunos insumos</option>
+      <option value="danado">❌ Algunos insumos llegaron dañados</option>
+    </select>
+    <button id="btnAprobarDestino" style="margin-top:12px;background:#2e7d32;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">✅ Confirmar recepción</button>
+    <button id="btnCancelarAprobacionDestino" style="margin-top:6px;background:#666;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">❌ Cancelar</button>
+ </div>
+   <!-- PANEL DE LISTA (CON FILTROS FUNCIONALES) -->
+  <div id="panelLista">
+    <div class="header-lista" id="headerLista">
+      <h2>📋 Todos los puntos</h2>
+      <button id="btnCerrarLista">✖ Cerrar</button>
+    </div>
+    <div class="panel-contenido">
+      <div id="filtrosLista">
+        <button class="activo" data-tipo="todos">Todos</button>
+        <button data-tipo="urgentes">🚨 Urgentes</button>
+        <button data-tipo="recogidos">✅ Recogidos</button>
+        <button data-tipo="no_recogidos">⏳ Pendientes</button>
+        <button data-tipo="refugio">🏠 Refugio</button>
+        <button data-tipo="centro_acopio">📦 Acopio</button>
+        <button data-tipo="hospital">🏥 Hospital</button>
+        <button data-tipo="edificio_caido">💥 Caído</button>
+        <button data-tipo="peligro_derrumbe">⚠️ Derrumbe</button>
+        <button data-tipo="sin_inspeccionar">❓ Sin insp.</button>
+        <button data-tipo="veterinaria">🐾 Veterinaria</button>
+        <button data-tipo="ayuda_psicologica">🧠 Psicología</button>
+        <button data-tipo="vacuna_tetanos">💉 Vacuna</button>
+      </div>
+      <div id="contenedorContadores"></div>
+      <div id="contenedorLista"></div>
+    </div>
+  </div>
 
-            // Click en mapa para seleccionar ubicación (solo admin)
-            map.on('click', function(e) {
-                if (isAdmin) {
-                    selectedLatLng = e.latlng;
-                    coordDisplay.textContent = `📍 ${selectedLatLng.lat.toFixed(6)}, ${selectedLatLng.lng.toFixed(6)}`;
-                    toast('Ubicación seleccionada', 'success');
-                } else {
-                    toast('Activa el modo Admin para agregar puntos', 'error');
-                }
-            });
+  <!-- PANEL DE DETALLE -->
+  <div id="panelDetalle">
+    <div class="header-detalle" id="headerDetalle">
+      <h3 id="detalleTitulo">Detalle</h3>
+      <button id="btnCerrarDetalle">✖</button>
+    </div>
+    <div class="panel-contenido" id="contenidoDetalle"></div>
+  </div>
 
-            // Cargar datos iniciales
-            loadPoints();
-        }
+  <!-- PANEL DE URGENCIAS -->
+  <div id="panelUrgencias">
+    <div class="header-urgencias" id="headerUrgencias">
+      <h2>🚨 Urgencias</h2>
+      <button id="btnCerrarUrgencias">✖ Cerrar</button>
+    </div>
+    <div class="panel-contenido" id="contenedorUrgencias"></div>
+  </div>
 
-        // --- CARGAR PUNTOS DESDE EL ALMACENAMIENTO LOCAL ---
-        function loadPoints() {
-            const stored = localStorage.getItem('mapavida_points');
-            if (stored) {
-                try {
-                    pointsData = JSON.parse(stored);
-                } catch (e) {
-                    pointsData = [];
-                }
-            } else {
-                // Datos de ejemplo
-                pointsData = [
-                    { id: 1, name: 'Refugio Los Palos Grandes', type: 'Refugio', lat: 10.4950, lng: -66.8850, address: 'Av. Francisco de Miranda', phone: '0212-555-1212', status: 'Pendiente', notes: 'Capacidad 50 personas' },
-                    { id: 2, name: 'Centro de Acopio Plaza Venezuela', type: 'Centro de Acopio', lat: 10.4900, lng: -66.8930, address: 'Plaza Venezuela', phone: '0212-555-2323', status: 'Atendido', notes: 'Reciben alimentos no perecederos' },
-                    { id: 3, name: 'Hospital Clínico Universitario', type: 'Hospital', lat: 10.5050, lng: -66.8980, address: 'Av. Los Ilustres', phone: '0212-555-3434', status: 'Urgente', notes: 'Falta medicinas' },
-                ];
-                savePoints();
-            }
-            renderMarkers();
-            updateStats();
-            if (isAdmin) renderAdminList();
-        }
+  <!-- BOTÓN CANCELAR NAVEGACIÓN -->
+  <button id="btnCancelarNavegacion">✖ Cancelar navegación</button>
 
-        function savePoints() {
-            localStorage.setItem('mapavida_points', JSON.stringify(pointsData));
-        }
-
-        // --- RENDERIZAR MARCADORES ---
-        function renderMarkers(filter = 'all') {
-            markersLayer.clearLayers();
-            let filtered = pointsData;
-            if (filter === 'urgent') filtered = pointsData.filter(p => p.status === 'Urgente');
-            else if (filter === 'pending') filtered = pointsData.filter(p => p.status === 'Pendiente');
-            else if (filter === 'done') filtered = pointsData.filter(p => p.status === 'Atendido');
-
-            filtered.forEach(point => {
-                const color = point.status === 'Urgente' ? '#d93025' :
-                              point.status === 'Atendido' ? '#137333' : '#f9ab00';
-                const icon = L.divIcon({
-                    html: `<div style="background:${color}; width:14px; height:14px; border-radius:50%; border:2px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>`,
-                    className: '',
-                    iconSize: [14, 14],
-                    iconAnchor: [7, 7],
-                });
-                const marker = L.marker([point.lat, point.lng], { icon }).addTo(markersLayer);
-                marker.bindPopup(createPopupContent(point));
-            });
-        }
-
-        function createPopupContent(point) {
-            const isAdminNow = isAdmin;
-            let actions = '';
-            if (isAdminNow) {
-                actions = `
-                    <div class="popup-actions">
-                        <button class="btn-edit" data-id="${point.id}"><i class="fas fa-edit"></i> Editar</button>
-                        <button class="btn-delete" data-id="${point.id}"><i class="fas fa-trash"></i> Eliminar</button>
-                        ${point.status !== 'Atendido' ? `<button class="btn-done" data-id="${point.id}"><i class="fas fa-check"></i> Marcar atendido</button>` : ''}
-                    </div>
-                `;
-            }
-            return `
-                <div class="popup-title">${DOMPurify.sanitize(point.name)}</div>
-                <div class="popup-detail"><i class="fas fa-tag"></i> ${DOMPurify.sanitize(point.type)}</div>
-                <div class="popup-detail"><i class="fas fa-map-pin"></i> ${DOMPurify.sanitize(point.address)}</div>
-                ${point.phone ? `<div class="popup-detail"><i class="fas fa-phone"></i> ${DOMPurify.sanitize(point.phone)}</div>` : ''}
-                <div class="popup-detail"><i class="fas fa-circle" style="color:${point.status === 'Urgente' ? '#d93025' : point.status === 'Atendido' ? '#137333' : '#f9ab00'};"></i> ${point.status}</div>
-                ${point.notes ? `<div class="popup-detail"><i class="fas fa-comment"></i> ${DOMPurify.sanitize(point.notes)}</div>` : ''}
-                ${actions}
-            `;
-        }
-
-        // --- ACTUALIZAR ESTADÍSTICAS ---
-        function updateStats() {
-            const total = pointsData.length;
-            const done = pointsData.filter(p => p.status === 'Atendido').length;
-            const pending = pointsData.filter(p => p.status === 'Pendiente').length;
-            const urgent = pointsData.filter(p => p.status === 'Urgente').length;
-            totalPointsSpan.textContent = total;
-            donePointsSpan.textContent = done;
-            pendingPointsSpan.textContent = pending;
-            urgentPointsSpan.textContent = urgent;
-        }
-
-        // --- RENDERIZAR LISTA ADMIN ---
-        function renderAdminList() {
-            if (!isAdmin) return;
-            if (pointsData.length === 0) {
-                adminList.innerHTML = '<p style="color:#9aa0a6;">No hay puntos registrados.</p>';
-                return;
-            }
-            let html = '';
-            pointsData.forEach(p => {
-                html += `
-                    <div class="item">
-                        <div class="info"><strong>${DOMPurify.sanitize(p.name)}</strong> (${p.status}) - ${p.type}</div>
-                        <div class="actions">
-                            <button class="edit" data-id="${p.id}"><i class="fas fa-edit"></i></button>
-                            <button class="delete" data-id="${p.id}"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </div>
-                `;
-            });
-            adminList.innerHTML = html;
-            // Eventos para editar/eliminar desde la lista
-            adminList.querySelectorAll('.edit').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = parseInt(this.dataset.id);
-                    editPoint(id);
-                });
-            });
-            adminList.querySelectorAll('.delete').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const id = parseInt(this.dataset.id);
-                    deletePoint(id);
-                });
-            });
-        }
-
-        // --- CRUD ---
-        function addPoint(data) {
-            const newId = pointsData.length ? Math.max(...pointsData.map(p => p.id)) + 1 : 1;
-            const newPoint = { id: newId, ...data };
-            pointsData.push(newPoint);
-            savePoints();
-            renderMarkers(currentFilter);
-            updateStats();
-            if (isAdmin) renderAdminList();
-            toast('Punto agregado correctamente', 'success');
-        }
-
-        function editPoint(id) {
-            const point = pointsData.find(p => p.id === id);
-            if (!point) return;
-            editingId = id;
-            modalTitle.textContent = 'Editar Punto';
-            pointName.value = point.name;
-            pointType.value = point.type;
-            pointAddress.value = point.address;
-            pointPhone.value = point.phone || '';
-            pointStatus.value = point.status;
-            pointNotes.value = point.notes || '';
-            selectedLatLng = { lat: point.lat, lng: point.lng };
-            coordDisplay.textContent = `📍 ${point.lat.toFixed(6)}, ${point.lng.toFixed(6)}`;
-            modalOverlay.classList.add('active');
-        }
-
-        function deletePoint(id) {
-            if (!confirm('¿Eliminar este punto?')) return;
-            pointsData = pointsData.filter(p => p.id !== id);
-            savePoints();
-            renderMarkers(currentFilter);
-            updateStats();
-            if (isAdmin) renderAdminList();
-            toast('Punto eliminado', 'error');
-        }
-
-        function markAsDone(id) {
-            const point = pointsData.find(p => p.id === id);
-            if (point) {
-                point.status = 'Atendido';
-                savePoints();
-                renderMarkers(currentFilter);
-                updateStats();
-                if (isAdmin) renderAdminList();
-                toast('Marcado como atendido', 'success');
-            }
-        }
-
-        // --- MANEJAR POPUP ACTIONS (event delegation) ---
-        document.addEventListener('click', function(e) {
-            const target = e.target.closest('button');
-            if (!target) return;
-            const id = target.dataset.id;
-            if (!id) return;
-            const pointId = parseInt(id);
-            if (target.classList.contains('btn-edit')) {
-                editPoint(pointId);
-            } else if (target.classList.contains('btn-delete')) {
-                deletePoint(pointId);
-            } else if (target.classList.contains('btn-done')) {
-                markAsDone(pointId);
-            }
-        });
-
-        // --- ADMIN LOGIN ---
-        adminLoginBtn.addEventListener('click', function() {
-            const pass = adminPasswordInput.value.trim();
-            if (pass === ADMIN_PASSWORD) {
-                isAdmin = true;
-                adminPanel.classList.add('active');
-                adminStatusLabel.textContent = 'Activado';
-                adminStatusLabel.className = 'status on';
-                adminStatusSpan.textContent = 'ON';
-                renderAdminList();
-                toast('Modo administrador activado', 'success');
-                adminPasswordInput.value = '';
-            } else {
-                toast('Contraseña incorrecta', 'error');
-            }
-        });
-
-        // --- MODAL ---
-        function openModal(title, data = null) {
-            modalTitle.textContent = title;
-            if (data) {
-                pointName.value = data.name || '';
-                pointType.value = data.type || 'Refugio';
-                pointAddress.value = data.address || '';
-                pointPhone.value = data.phone || '';
-                pointStatus.value = data.status || 'Pendiente';
-                pointNotes.value = data.notes || '';
-                if (data.lat && data.lng) {
-                    selectedLatLng = { lat: data.lat, lng: data.lng };
-                    coordDisplay.textContent = `📍 ${data.lat.toFixed(6)}, ${data.lng.toFixed(6)}`;
-                } else {
-                    selectedLatLng = null;
-                    coordDisplay.textContent = 'Ninguna seleccionada';
-                }
-            } else {
-                pointForm.reset();
-                selectedLatLng = null;
-                coordDisplay.textContent = 'Ninguna seleccionada';
-                editingId = null;
-            }
-            modalOverlay.classList.add('active');
-        }
-
-        modalCancel.addEventListener('click', function() {
-            modalOverlay.classList.remove('active');
-        });
-
-        modalOverlay.addEventListener('click', function(e) {
-            if (e.target === modalOverlay) modalOverlay.classList.remove('active');
-        });
-
-        pointForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            if (!selectedLatLng) {
-                toast('Selecciona una ubicación en el mapa', 'error');
-                return;
-            }
-            const data = {
-                name: pointName.value.trim(),
-                type: pointType.value,
-                address: pointAddress.value.trim(),
-                phone: pointPhone.value.trim(),
-                status: pointStatus.value,
-                notes: pointNotes.value.trim(),
-                lat: selectedLatLng.lat,
-                lng: selectedLatLng.lng,
-            };
-            if (editingId) {
-                // Editar
-                const index = pointsData.findIndex(p => p.id === editingId);
-                if (index !== -1) {
-                    pointsData[index] = { ...pointsData[index], ...data };
-                    savePoints();
-                    renderMarkers(currentFilter);
-                    updateStats();
-                    if (isAdmin) renderAdminList();
-                    toast('Punto actualizado', 'success');
-                }
-                editingId = null;
-            } else {
-                addPoint(data);
-            }
-            modalOverlay.classList.remove('active');
-        });
-
-        addPointBtn.addEventListener('click', function() {
-            if (!isAdmin) {
-                toast('Activa el modo Admin primero', 'error');
-                return;
-            }
-            openModal('Nuevo Punto de Ayuda');
-        });
-
-        // --- BOTONES DE LA BARRA ---
-        // Lista: muestra/oculta panel admin (si está activo)
-        listBtn.addEventListener('click', function() {
-            if (!isAdmin) {
-                toast('Activa el modo Admin para ver la lista', 'error');
-                return;
-            }
-            adminPanel.classList.toggle('active');
-            if (adminPanel.classList.contains('active')) {
-                renderAdminList();
-                this.classList.add('active');
-            } else {
-                this.classList.remove('active');
-            }
-        });
-
-        // Filtro3s: abrir modal de filtros (simplificado)
-        filterBtn.addEventListener('click', function() {
-            const filter = prompt('Filtrar por estado (escribe: all, urgent, pending, done):', currentFilter);
-            if (filter && ['all', 'urgent', 'pending', 'done'].includes(filter)) {
-                currentFilter = filter;
-                renderMarkers(currentFilter);
-                toast(`Filtro aplicado: ${filter}`, 'success');
-            } else if (filter !== null) {
-                toast('Filtro inválido. Usa: all, urgent, pending, done', 'error');
-            }
-        });
-
-        // Urgencias: toggle para mostrar solo urgentes
-        urgencyBtn.addEventListener('click', function() {
-            this.classList.toggle('active');
-            if (this.classList.contains('active')) {
-                currentFilter = 'urgent';
-                renderMarkers('urgent');
-                toast('Mostrando solo urgencias', 'success');
-            } else {
-                currentFilter = 'all';
-                renderMarkers('all');
-                toast('Mostrando todos los puntos', 'success');
-            }
-        });
-
-        // Google: simular búsqueda (puedes redirigir a Google)
-        googleBtn.addEventListener('click', function() {
-            const query = searchInput.value.trim();
-            if (query) {
-                // Aquí puedes implementar búsqueda local o redirigir
-                toast(`Buscando: "${query}" (simulado)`, 'success');
-                // window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
-            } else {
-                toast('Escribe algo para buscar', 'error');
-            }
-        });
-
-        // Buscar con Enter
-        searchInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                googleBtn.click();
-            }
-        });
-
-        // --- TOAST ---
-        function toast(message, type = 'info') {
-            const container = document.getElementById('toastContainer');
-            const toastEl = document.createElement('div');
-            toastEl.className = `toast ${type}`;
-            toastEl.textContent = message;
-            container.appendChild(toastEl);
-            setTimeout(() => {
-                toastEl.remove();
-            }, 3500);
-        }
-
-        // --- INICIAR ---
-        document.addEventListener('DOMContentLoaded', function() {
-            initMap();
-            // Cargar datos de ejemplo si no hay
-            if (pointsData.length === 0) {
-                loadPoints();
-            }
-            // Actualizar estado admin
-            adminStatusSpan.textContent = 'OFF';
-            adminStatusLabel.textContent = 'Desactivado';
-            adminStatusLabel.className = 'status off';
-        });
-
-        // Exponer para depuración
-        window.mapavida = { map, pointsData, isAdmin, loadPoints, renderMarkers, addPoint, deletePoint, editPoint };
-    </script>
+  <script src="app.js"></script>
 </body>
 </html>
