@@ -128,20 +128,20 @@ const TIPOS = {
     }),
     popupDetalle: (info) => {
       let html = '';
-      // Mostrar insumos necesarios en una sola línea (compacto)
+      // Mostrar insumos necesarios (prioridad)
       if (info.necesita?.length) {
-        const maxMostrar = 5;
-        const insumosMostrar = info.necesita.slice(0, maxMostrar);
-        const restantes = info.necesita.length - maxMostrar;
-        let textoInsumos = insumosMostrar.map(i => sanitizar(i)).join(', ');
-        if (restantes > 0) textoInsumos += ` y ${restantes} más...`;
-        html += `<div class="popup-info" style="color:#d32f2f;font-weight:bold;">📦 ${textoInsumos}</div>`;
+        html += `<div class="popup-info" style="color:#d32f2f;font-weight:bold;font-size:14px;">📦 INSUMOS NECESARIOS:</div>`;
+        html += `<ul class="popup-lista" style="margin-bottom:6px;">`;
+        info.necesita.forEach(insumo => {
+          html += `<li style="font-weight:bold;color:#E53935;">${sanitizar(insumo)}</li>`;
+        });
+        html += `</ul>`;
       }
       if (info.suficientes?.length) {
         html += `<div class="popup-info" style="color:#2e7d32;">✅ Ya no necesitan: ${sanitizar(info.suficientes.join(', '))}</div>`;
       }
       if (info.necesidad_infantil) {
-        html += `<div class="popup-info" style="color:#FF6F00;">🧸 Cuidado infantil</div>`;
+        html += `<div class="popup-info" style="color:#FF6F00;">🧸 Necesitan recreación/cuidado para niños</div>`;
       }
       return html;
     }
@@ -334,7 +334,17 @@ const TIPOS = {
       urgente: d.urgente === 'Sí',
       necesidades: sanitizarArray(d.necesidades ? d.necesidades.split('\n').filter(s => s.trim()) : []),
       estado: 'pendiente',
-      fecha_creacion: new Date().toLocaleString()
+      fecha_creacion: new Date().toLocaleString(),
+      fecha_edicion: new Date().toLocaleString()
+    }),
+    popupDetalle: (info) => {
+      let html = '';
+      if (info.horario) html += `<div class="popup-info">🕐 Horario: ${sanitizar(info.horario)}</div>`;
+      if (info.contacto) html += `<div class="popup-info">📞 Contacto: ${sanitizar(info.contacto)}</div>`;
+      return html;
+    }
+  }
+};
 // ============================================================
 // BLOQUE 2: CARGA, GUARDADO, ADMIN Y GESTIÓN DE PENDIENTES
 // ============================================================
