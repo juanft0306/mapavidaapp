@@ -897,7 +897,7 @@ function onMapClick(e) {
   obtenerDireccionDesdeCoordenadas(lat, lng);
 }
 // ============================================================
-// BLOQUE 5: MENÚ, FORMULARIOS, GUARDAR Y CANCELAR
+// BLOQUE 5: MENÚ, FORMULARIOS, GUARDAR, CANCELAR Y BUSCADOR UNIFICADO
 // ============================================================
 
 const menuOpciones = document.getElementById('menuOpciones');
@@ -913,6 +913,9 @@ const btnGuardar = document.getElementById('btnGuardar');
 const btnEliminar = document.getElementById('btnEliminar');
 const btnCancelar = document.getElementById('btnCancelar');
 
+// ============================================================
+// MENÚ Y FORMULARIOS
+// ============================================================
 btnAgregar.addEventListener('click', function(e) {
   e.stopPropagation();
   menuOpciones.style.display = (menuOpciones.style.display === 'flex') ? 'none' : 'flex';
@@ -963,6 +966,9 @@ function mostrarFormulario(tipo) {
   }
 }
 
+// ============================================================
+// GUARDAR PUNTO
+// ============================================================
 btnGuardar.addEventListener('click', function() {
   if (!tipoSeleccionado) { alert('Selecciona un tipo primero'); return; }
   if (!ubicacionSeleccionada) { alert('Toca el mapa para seleccionar ubicación'); return; }
@@ -1004,6 +1010,9 @@ btnGuardar.addEventListener('click', function() {
   aplicarFiltros();
 });
 
+// ============================================================
+// CANCELAR
+// ============================================================
 btnCancelar.addEventListener('click', function() {
   const btnRegistro = document.getElementById('btnRegistrarVoluntario');
   if (btnRegistro) { document.getElementById('btnCancelarVoluntario').click(); return; }
@@ -1018,26 +1027,9 @@ btnCancelar.addEventListener('click', function() {
   ubicacionSeleccionada = null;
 });
 
-document.getElementById('btnBuscar').addEventListener('click', async function() {
-  const query = document.getElementById('buscador').value.trim();
-  if (!query) return;
-  try {
-    const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=ve`);
-    const data = await resp.json();
-    if (data.length === 0) { alert('No se encontraron resultados'); return; }
-    const r = data[0];
-    const lat = parseFloat(r.lat);
-    const lon = parseFloat(r.lon);
-    map.setView([lat, lon], 15);
-    L.marker([lat, lon]).addTo(map).bindPopup(`📍 ${r.display_name}`).openPopup();
-  } catch (e) {
-    alert('Error al buscar: ' + e.message);
-  }
-});
-document.getElementById('buscador').addEventListener('keypress', function(e) {
-  if (e.key === 'Enter') document.getElementById('btnBuscar').click();
-});
-
+// ============================================================
+// FILTROS DEL MAPA (superiores)
+// ============================================================
 document.querySelectorAll('#filtros .filtro-btn').forEach(btn => {
   btn.addEventListener('click', function() {
     document.querySelectorAll('#filtros .filtro-btn').forEach(b => b.classList.remove('activo'));
@@ -1050,6 +1042,83 @@ document.querySelectorAll('#filtros .filtro-btn').forEach(btn => {
 document.getElementById('btnPendientes').addEventListener('click', function() {
   mostrarPendientes();
 });
+
+// ============================================================
+// BUSCADOR UNIFICADO (TOGGLE ENTRE UBICACIÓN Y NECESIDAD)
+// ============================================================
+let modoBusqueda = 'ubicacion'; // 'ubicacion' o 'necesidad'
+
+const inputUnificado = document.getElementById('buscadorUnificado');
+const btnToggleModo = document.getElementById('btnToggleModo');
+const btnBuscarUnificado = document.getElementById('btnBuscarUnificado');
+
+// Cambiar modo al hacer clic en el toggle
+btnToggleModo.addEventListener('click', function() {
+  if (modoBusqueda === 'ubicacion') {
+    modoBusqueda = 'necesidad';
+    btnToggleModo.textContent = '🏷️ Necesidad';
+    btnToggleModo.style.background = '#f57c00';
+    inputUnificado.placeholder = 'Buscar por necesidad (ej: agua, comida)';
+    // Cambiar borde del contenedor
+    inputUnificado.parentElement.style.borderColor = '#f57c00';
+  } else {
+    modoBusqueda = 'ubicacion';
+    btnToggleModo.textContent = '📍 Ubicación';
+    btnToggleModo.style.background = '#1a237e';
+    inputUnificado.placeholder = 'Buscar ubicación (ej: Los Rosales)';
+    inputUnificado.parentElement.style.borderColor = '#1a73e8';
+  }
+  // Limpiar input al cambiar
+  inputUnificado.value = '';
+});
+
+// Ejecutar búsqueda según el modo activo
+btnBuscarUnificado.addEventListener('click', function() {
+  const texto = inputUnificado.value.trim();
+  if (!texto) return;
+
+  if (modoBusqueda === 'ubicacion') {
+    // Buscar ubicación con Nominatim
+    buscarUbicacion(texto);
+  } else {
+    // Buscar por necesidad
+    buscarPorNecesidad(texto);
+  }
+});
+
+// Buscar al presionar Enter
+inputUnificado.addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    btnBuscarUnificado.click();
+  }
+});
+
+// Función para buscar ubicación (reutiliza la lógica anterior)
+async function buscarUbicacion(query) {
+  try {
+    const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=ve`);
+    const data = await resp.json();
+    if (data.length === 0) { alert('No se encontraron resultados'); return; }
+    const r = data[0];
+    const lat = parseFloat(r.lat);
+    const lon = parseFloat(r.lon);
+    map.setView([lat, lon], 15);
+    L.marker([lat, lon]).addTo(map).bindPopup(`📍 ${r.display_name}`).openPopup();
+  } catch (e) {
+    alert('Error al buscar: ' + e.message);
+  }
+}
+
+// Función para buscar por necesidad (reutiliza la lógica de BLOQUE 6)
+function buscarPorNecesidad(texto) {
+  busquedaNecesidad = texto;
+  document.getElementById('panelLista').style.display = 'flex';
+  mostrarListaPuntos();
+  const limpiarBtn = document.getElementById('btnLimpiarBusqueda');
+  if (limpiarBtn) limpiarBtn.style.display = 'inline-block';
+}
+
+// Nota: las funciones mostrarListaPuntos, busquedaNecesidad, etc. están definidas en el BLOQUE 6
 // ============================================================
 // BLOQUE 6: LISTA, CONTADORES, DETALLE, URGENCIAS Y BUSCADOR POR NECESIDAD (CON RESALTADO Y PRIORIDAD)
 // ============================================================
