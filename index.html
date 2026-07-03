@@ -15,16 +15,16 @@
   <!-- Leaflet Routing Machine JS -->
   <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
   
-  <!-- DOMPurify (para sanitizar HTML) -->
+  <!-- DOMPurify -->
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.0/dist/purify.min.js"></script>
   
   <style>
     /* ===== RESET Y BASE ===== */
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; overflow: hidden; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; }
     #map { height: 100vh; width: 100%; }
 
-    /* ===== PANEL SUPERIOR (RESPONSIVE) ===== */
+    /* ===== PANEL SUPERIOR ===== */
     #panelSuperior {
       position: fixed;
       top: 10px;
@@ -36,7 +36,7 @@
       padding: 10px 12px;
       box-shadow: 0 4px 16px rgba(0,0,0,0.25);
       backdrop-filter: blur(4px);
-      max-height: 90vh;
+      max-height: 80vh;
       overflow-y: auto;
     }
     #panelSuperior > div:first-child {
@@ -116,7 +116,7 @@
       border-radius: 50%;
     }
 
-    /* ===== MENÚ FLOTANTE (RESPONSIVE) ===== */
+    /* ===== MENÚ FLOTANTE ===== */
     #menuContainer {
       position: fixed;
       bottom: 20px;
@@ -187,7 +187,7 @@
     #btnAdmin:active, #btnPendientes:active, #btnAuth:active { transform: scale(0.95); }
     #btnPendientes { background: #f57f17; }
 
-    /* ===== FORMULARIO PRINCIPAL (RESPONSIVE) ===== */
+    /* ===== FORMULARIO PRINCIPAL ===== */
     #formulario, #formularioConductor, #panelAprobacionOrigen, #panelAprobacionDestino, #panelLogin {
       display: none;
       position: fixed;
@@ -260,7 +260,7 @@
     #btnLogin { background: #1a237e; color: white; }
     #btnCerrarLogin { background: #666; color: white; margin-top: 6px; }
 
-    /* ===== POPUPS DEL MAPA (RESPONSIVE) ===== */
+    /* ===== POPUPS DEL MAPA ===== */
     .popup-tipo { font-weight: bold; color: #E53935; }
     .popup-info { font-size: 13px; margin: 3px 0; }
     .popup-distancia { font-size: 12px; color: #555; margin-top: 4px; }
@@ -280,7 +280,7 @@
       min-width: 200px;
     }
 
-    /* ===== PANEL DE LISTA, DETALLE, URGENCIAS (RESPONSIVE) ===== */
+    /* ===== PANEL DE LISTA, DETALLE, URGENCIAS ===== */
     #panelLista, #panelDetalle, #panelUrgencias {
       display: none;
       position: fixed;
@@ -432,7 +432,7 @@
     }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-    /* ===== RESPONSIVE EXTRA ===== */
+    /* ===== RESPONSIVE ===== */
     @media (max-width: 480px) {
       #panelSuperior { padding: 8px 10px; }
       #panelSuperior input { font-size: 13px; padding: 6px 10px; height: 34px; min-width: 80px; }
@@ -477,19 +477,19 @@
     <div>Cargando mapa...</div>
   </div>
 
-  <!-- PANEL SUPERIOR (CON BUSCADORES MEJORADOS) -->
+  <!-- PANEL SUPERIOR (CON BUSCADOR UNIFICADO) -->
   <div id="panelSuperior">
     <div style="display:flex; flex-wrap:wrap; align-items:center; gap:6px; width:100%;">
-      <!-- Buscador de ubicación -->
-      <div style="display:flex; align-items:center; gap:4px; flex:2; min-width:180px; background:#f0f4ff; border-radius:20px; padding:2px; border:2px solid #1a73e8; box-shadow:0 2px 6px rgba(26,115,232,0.2);">
-        <input type="text" id="buscador" placeholder="Buscar ubicación (ej: Los Rosales)" style="flex:1; border:none; background:transparent; padding:8px 12px; font-size:14px; outline:none; min-width:80px;" />
-        <button id="btnBuscar" style="background:#1a73e8; color:white; border:none; border-radius:20px; padding:6px 14px; font-weight:bold; cursor:pointer; font-size:13px; white-space:nowrap;">🔍 Ubicación</button>
-      </div>
-      
-      <!-- Buscador de necesidades -->
-      <div style="display:flex; align-items:center; gap:4px; flex:2; min-width:180px; background:#fff8e1; border-radius:20px; padding:2px; border:2px solid #f57c00; box-shadow:0 2px 6px rgba(245,124,0,0.2);">
-        <input type="text" id="buscadorNecesidades" placeholder="Buscar por necesidad (ej: agua, comida)" style="flex:1; border:none; background:transparent; padding:8px 12px; font-size:14px; outline:none; min-width:80px;" />
-        <button id="btnBuscarNecesidad" style="background:#f57c00; color:white; border:none; border-radius:20px; padding:6px 14px; font-weight:bold; cursor:pointer; font-size:13px; white-space:nowrap;">🏷️ Necesidad</button>
+      <!-- Buscador unificado (con toggle de modo) -->
+      <div style="display:flex; align-items:center; gap:4px; flex:3; min-width:200px; background:#f5f5f5; border-radius:20px; padding:2px; border:2px solid #1a73e8; box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+        <!-- Input de búsqueda -->
+        <input type="text" id="buscadorUnificado" placeholder="Buscar ubicación (ej: Los Rosales)" style="flex:1; border:none; background:transparent; padding:8px 12px; font-size:14px; outline:none; min-width:80px;" />
+        
+        <!-- Botón de toggle (cambia entre ubicación y necesidad) -->
+        <button id="btnToggleModo" style="background:#1a237e; color:white; border:none; border-radius:20px; padding:6px 12px; font-weight:bold; cursor:pointer; font-size:12px; white-space:nowrap; min-width:70px;">📍 Ubicación</button>
+        
+        <!-- Botón de acción (buscar) -->
+        <button id="btnBuscarUnificado" style="background:#1a73e8; color:white; border:none; border-radius:20px; padding:6px 14px; font-weight:bold; cursor:pointer; font-size:13px; white-space:nowrap;">🔍 Buscar</button>
       </div>
       
       <!-- Botones de acción -->
@@ -518,7 +518,7 @@
   <!-- MAPA -->
   <div id="map"></div>
 
-  <!-- MENÚ FLOTANTE (SIN CHAT, SIN SEGURIDAD) -->
+  <!-- MENÚ FLOTANTE -->
   <div id="menuContainer">
     <div id="menuOpciones">
       <button data-tipo="refugio"><span class="color-bola" style="background:#2E7D32;width:14px;height:14px;"></span> 🏠 Refugio</button>
@@ -625,7 +625,7 @@
     <button id="btnAprobarDestino" style="margin-top:12px;background:#2e7d32;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">✅ Confirmar recepción</button>
     <button id="btnCancelarAprobacionDestino" style="margin-top:6px;background:#666;color:white;border:none;padding:10px;border-radius:8px;font-weight:bold;cursor:pointer;width:100%;">❌ Cancelar</button>
   </div>
-    <!-- PANEL DE LISTA (CON FILTROS FUNCIONALES) -->
+    <!-- PANEL DE LISTA -->
   <div id="panelLista">
     <div class="header-lista" id="headerLista">
       <h2>📋 Todos los puntos</h2>
